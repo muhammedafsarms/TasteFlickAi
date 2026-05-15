@@ -54,6 +54,7 @@ export async function generateRecipeFromPantry(
 
 const prompt = ai.definePrompt({
   name: 'generateRecipeFromPantryPrompt',
+  model: 'googleai/gemini-1.5-flash',
   input: {schema: GenerateRecipeFromPantryInputSchema},
   output: {schema: GenerateRecipeFromPantryOutputSchema},
   prompt: `You are a world-class gourmet chef with particular mastery in Indian regional cuisines (North Indian, South Indian, Bengali, Coastal, etc.) and global fusion.
