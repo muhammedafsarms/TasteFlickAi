@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -9,6 +8,7 @@ import { X, Heart, Info, ChevronRight, ChevronLeft, Sparkles } from "lucide-reac
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { analyzeRecipeNutrition } from "@/ai/flows/analyze-recipe-nutrition-flow";
+import { cn } from "@/lib/utils";
 
 interface FlavorFlickProps {
   suggestions: Recipe[];
@@ -66,6 +66,9 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
     }, 300);
   };
 
+  // Deterministic placeholder based on recipe name
+  const placeholderUrl = `https://picsum.photos/seed/${currentRecipe.recipeName.length}/600/800`;
+
   return (
     <div className="relative w-full max-w-md mx-auto h-[70vh] flex flex-col items-center justify-center overflow-hidden">
       <div className={cn(
@@ -77,10 +80,11 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
         <Card className="h-full w-full overflow-hidden shadow-2xl border-none">
           <div className="relative h-full w-full group">
             <Image
-              src={currentRecipe.imageUrl || "https://picsum.photos/seed/food/600/800"}
+              src={currentRecipe.imageUrl || placeholderUrl}
               alt={currentRecipe.recipeName}
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
+              data-ai-hint="gourmet food"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             
@@ -175,5 +179,3 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";
