@@ -1,11 +1,12 @@
-
 'use server';
 /**
  * @fileOverview Generates highly detailed gourmet recipes from pantry ingredients using Genkit Prompts.
+ * Includes a fallback mechanism to Groq if Gemini quota is reached.
  */
 
 import { ai } from '../genkit';
 import { z } from 'zod';
+import { groqClient, isGroqConfigured } from '../groq-client';
 
 const GenerateRecipeFromPantryInputSchema = z.object({
   ingredients: z.array(z.string()),
@@ -63,15 +64,44 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+      // Primary Attempt: Genkit with Gemini
       const { output } = await recipePrompt(input);
-      if (!output) {
-        console.error("Alchemist: Empty output from prompt.");
-        throw new Error('The Alchemist failed to manifest a vision.');
-      }
-      console.log("Alchemist: Successfully manifested recipe:", output.recipeName);
+      if (!output) throw new Error('Empty output from Gemini.');
       return output;
     } catch (error: any) {
-      console.error("Alchemy Error during manifestation:", error);
+      console.error("Alchemy Error during Gemini manifestation:", error.message);
+      
+      const isQuotaError = error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED');
+      
+      if (isQuotaError && isGroqConfigured()) {
+        console.log("Alchemist: Gemini exhausted. Invoking fallback spirits (Groq)...");
+        try {
+          const completion = await groqClient.chat.completions.create({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { 
+                role: 'system', 
+                content: 'You are a Michelin-star chef. Create a gourmet recipe. Output ONLY valid raw JSON matching the requested structure.' 
+              },
+              { 
+                role: 'user', 
+                content: `Ingredients: ${input.ingredients.join(', ')}. Dietary: ${input.dietaryPreferences?.join(', ') || 'None'}.
+                Return JSON structure: { recipeName: string (1-3 words), description: string, prepTime: string, cookTime: string, difficulty: "Beginner"|"Intermediate"|"Advanced"|"Master", instructions: string[], ingredientsList: string[], platingSuggestions: string, dietaryNotes: string }`
+              }
+            ],
+            response_format: { type: 'json_object' }
+          });
+
+          const content = completion.choices[0]?.message?.content;
+          if (!content) throw new Error('Groq returned empty plate.');
+          
+          return GenerateRecipeFromPantryOutputSchema.parse(JSON.parse(content));
+        } catch (groqError: any) {
+          console.error("Alchemy Error during Groq fallback:", groqError.message);
+          throw new Error(`All culinary spirits are currently busy: ${groqError.message}`);
+        }
+      }
+      
       throw new Error(`The culinary spirits were interrupted: ${error.message}`);
     }
   }

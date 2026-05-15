@@ -1,10 +1,12 @@
 'use server';
 /**
  * @fileOverview Culinary advice and recipe manifestation chat flow using Genkit Prompts.
+ * Includes fallback to Groq for quota resilience.
  */
 
 import { ai } from '../genkit';
 import { z } from 'genkit';
+import { groqClient, isGroqConfigured } from '../groq-client';
 
 const ChefChatInputSchema = z.object({
   message: z.string(),
@@ -62,11 +64,39 @@ const chefChatFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+      // Primary Attempt: Genkit Gemini
       const { output } = await chefPrompt(input);
       if (!output) throw new Error('Chef received an empty plate.');
       return output;
     } catch (error: any) {
-      console.error("Chef Chat Error:", error);
+      console.error("Chef Chat Gemini Error:", error.message);
+
+      const isQuotaError = error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED');
+
+      if (isQuotaError && isGroqConfigured()) {
+        console.log("Chef: Gemini exhausted. Consulting the fallback Llama scrolls...");
+        try {
+          const completion = await groqClient.chat.completions.create({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { 
+                role: 'system', 
+                content: 'You are a Michelin-star chef. Answer culinary questions. If a recipe is requested, output a structured JSON object. Output ONLY raw JSON.' 
+              },
+              ... (input.history || []).map(h => ({ role: h.role, content: h.content })),
+              { role: 'user', content: input.message }
+            ],
+            response_format: { type: 'json_object' }
+          });
+
+          const content = completion.choices[0]?.message?.content;
+          if (!content) throw new Error('Groq fallback failed.');
+          return ChefChatOutputSchema.parse(JSON.parse(content));
+        } catch (groqError: any) {
+          console.error("Chef Fallback Error:", groqError.message);
+        }
+      }
+
       return {
         answer: `The kitchen is briefly overwhelmed. (Error: ${error.message || "Unknown mishap"})`,
         suggestions: ["Try again in a moment"]
