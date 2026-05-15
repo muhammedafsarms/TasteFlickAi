@@ -1,111 +1,65 @@
-
 'use server';
 /**
- * @fileOverview A Genkit flow for generating gourmet-style recipes based on available pantry ingredients and dietary preferences.
- *
- * - generateRecipeFromPantry - A function that generates a recipe.
- * - GenerateRecipeFromPantryInput - The input type for the generateRecipeFromPantry function.
- * - GenerateRecipeFromPantryOutput - The return type for the generateRecipeFromPantry function.
+ * @fileOverview Generates gourmet recipes from pantry ingredients with robust retry logic.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {googleAI} from '@genkit-ai/google-genai';
 
 const GenerateRecipeFromPantryInputSchema = z.object({
-  ingredients: z
-    .array(z.string())
-    .describe('A list of ingredients available in the pantry.'),
-  dietaryPreferences: z
-    .array(z.string())
-    .optional()
-    .describe(
-      'Optional dietary preferences or restrictions (e.g., "vegetarian", "gluten-free", "low-carb").'
-    ),
+  ingredients: z.array(z.string()),
+  dietaryPreferences: z.array(z.string()).optional(),
 });
-export type GenerateRecipeFromPantryInput = z.infer<
-  typeof GenerateRecipeFromPantryInputSchema
->;
+export type GenerateRecipeFromPantryInput = z.infer<typeof GenerateRecipeFromPantryInputSchema>;
 
 const GenerateRecipeFromPantryOutputSchema = z.object({
-  recipeName: z.string().describe('The name of the gourmet recipe.'),
-  description: z
-    .string()
-    .describe('A brief, enticing description of the recipe.'),
-  instructions: z
-    .array(z.string())
-    .describe('A step-by-step guide to prepare the recipe.'),
-  ingredientsList: z
-    .array(z.string())
-    .describe(
-      'A detailed list of ingredients with quantities needed for the recipe.'
-    ),
-  dietaryNotes: z
-    .string()
-    .describe('Any notes regarding dietary compliance or suggestions.'),
+  recipeName: z.string(),
+  description: z.string(),
+  instructions: z.array(z.string()),
+  ingredientsList: z.array(z.string()),
+  dietaryNotes: z.string(),
 });
-export type GenerateRecipeFromPantryOutput = z.infer<
-  typeof GenerateRecipeFromPantryOutputSchema
->;
+export type GenerateRecipeFromPantryOutput = z.infer<typeof GenerateRecipeFromPantryOutputSchema>;
 
-export async function generateRecipeFromPantry(
-  input: GenerateRecipeFromPantryInput
-): Promise<GenerateRecipeFromPantryOutput> {
-  return generateRecipeFromPantryFlow(input);
-}
+const RETRY_DELAY = [2000, 5000, 10000];
 
-const generateRecipeFromPantryFlow = ai.defineFlow(
-  {
-    name: 'generateRecipeFromPantryFlow',
-    inputSchema: GenerateRecipeFromPantryInputSchema,
-    outputSchema: GenerateRecipeFromPantryOutputSchema,
-  },
-  async (input) => {
-    let retries = 3;
-    let lastError: any;
-
-    while (retries > 0) {
-      try {
-        const { text } = await ai.generate({
-          model: 'googleai/gemini-2.0-flash',
-          prompt: `You are a world-class gourmet chef. Craft a unique, gourmet-style recipe using the following ingredients.
-          
-          Ingredients available: ${input.ingredients.join(', ')}
-          ${input.dietaryPreferences ? `Dietary preferences: ${input.dietaryPreferences.join(', ')}` : ''}
-
-          Return ONLY a raw JSON object (no markdown, no extra text) with the following structure:
-          {
-            "recipeName": "string",
-            "description": "string",
-            "instructions": ["string"],
-            "ingredientsList": ["string"],
-            "dietaryNotes": "string"
-          }`,
-        });
-
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('No JSON found in response');
+export async function generateRecipeFromPantry(input: GenerateRecipeFromPantryInput): Promise<GenerateRecipeFromPantryOutput> {
+  let attempt = 0;
+  
+  while (attempt <= RETRY_DELAY.length) {
+    try {
+      const { text } = await ai.generate({
+        model: 'googleai/gemini-2.0-flash',
+        config: {
+          temperature: 0.7,
+          maxOutputTokens: 512,
+        },
+        prompt: `Chef, create a unique gourmet recipe.
+        Ingredients: ${input.ingredients.join(', ')}
+        ${input.dietaryPreferences?.length ? `Preferences: ${input.dietaryPreferences.join(', ')}` : ''}
         
-        const jsonString = jsonMatch[0];
-        const parsed = JSON.parse(jsonString);
-        return GenerateRecipeFromPantryOutputSchema.parse(parsed);
-      } catch (error: any) {
-        lastError = error;
-        const errorMsg = error.message?.toLowerCase() || '';
-        const isRetryable = errorMsg.includes('503') || 
-                          errorMsg.includes('high demand') || 
-                          errorMsg.includes('unavailable') || 
-                          errorMsg.includes('rate limit') ||
-                          errorMsg.includes('429');
-        
-        if (isRetryable && retries > 1) {
-          retries--;
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          continue;
-        }
-        throw error;
+        Output raw JSON:
+        {
+          "recipeName": "Title",
+          "description": "Short intro",
+          "instructions": ["Step 1", "Step 2"],
+          "ingredientsList": ["Qty Item"],
+          "dietaryNotes": "Info"
+        }`
+      });
+
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Invalid response format');
+      return GenerateRecipeFromPantryOutputSchema.parse(JSON.parse(jsonMatch[0]));
+    } catch (error: any) {
+      const isQuotaError = error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED');
+      if (isQuotaError && attempt < RETRY_DELAY.length) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
+        attempt++;
+        continue;
       }
+      throw new Error(isQuotaError ? "The Alchemist is busy. Please try again in a moment." : "Alchemy failed. Check your ingredients.");
     }
-    throw lastError || new Error('The kitchen is busy, please try again soon.');
   }
-);
+  throw new Error("The kitchen is currently over capacity. Please wait a minute.");
+}

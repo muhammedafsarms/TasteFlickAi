@@ -1,83 +1,64 @@
-
 'use server';
 /**
- * @fileOverview A Genkit flow for answering culinary doubts and providing expert cooking advice.
- *
- * - chefChat - A function that handles the chat process.
- * - ChefChatInput - The input type for the chefChat function.
- * - ChefChatOutput - The return type for the chefChat function.
+ * @fileOverview Culinary advice chat flow with quota management.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {googleAI} from '@genkit-ai/google-genai';
 
 const ChefChatInputSchema = z.object({
-  message: z.string().describe('The user\'s question or doubt about cooking.'),
+  message: z.string(),
   history: z.array(z.object({
     role: z.enum(['user', 'model']),
     content: z.string()
-  })).optional().describe('The conversation history for context.'),
+  })).optional(),
 });
 export type ChefChatInput = z.infer<typeof ChefChatInputSchema>;
 
 const ChefChatOutputSchema = z.object({
-  answer: z.string().describe('The expert chef\'s detailed answer.'),
-  suggestions: z.array(z.string()).optional().describe('Follow-up questions or suggestions.'),
+  answer: z.string(),
+  suggestions: z.array(z.string()).optional(),
 });
 export type ChefChatOutput = z.infer<typeof ChefChatOutputSchema>;
 
+const RETRY_DELAY = [2000, 5000, 10000];
+
 export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
-  return chefChatFlow(input);
-}
+  let attempt = 0;
 
-const chefChatFlow = ai.defineFlow(
-  {
-    name: 'chefChatFlow',
-    inputSchema: ChefChatInputSchema,
-    outputSchema: ChefChatOutputSchema,
-  },
-  async (input) => {
-    let retries = 3;
-    let lastError: any;
-
-    while (retries > 0) {
-      try {
-        const historyText = input.history?.map(h => `${h.role}: ${h.content}`).join('\n') || '';
+  while (attempt <= RETRY_DELAY.length) {
+    try {
+      const { text } = await ai.generate({
+        model: 'googleai/gemini-2.0-flash',
+        config: {
+          temperature: 0.8,
+          maxOutputTokens: 400,
+        },
+        prompt: `You are a world-class chef. Answer: ${input.message}
+        History: ${input.history?.slice(-4).map(h => `${h.role}: ${h.content}`).join('\n')}
         
-        const { text } = await ai.generate({
-          model: 'googleai/gemini-2.0-flash',
-          prompt: `You are the "TasteFlick Alchemist", a world-renowned gourmet chef. Answer any culinary question.
-          
-          User's Question: ${input.message}
-          ${historyText ? `\nPrevious context:\n${historyText}` : ''}
+        Output raw JSON:
+        {
+          "answer": "Chef's response",
+          "suggestions": ["Follow-up question?"]
+        }`
+      });
 
-          Return ONLY a raw JSON object (no markdown) with this structure:
-          {
-            "answer": "string",
-            "suggestions": ["string"]
-          }`,
-        });
-
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('No JSON found in response');
-        
-        const jsonString = jsonMatch[0];
-        const parsed = JSON.parse(jsonString);
-        return ChefChatOutputSchema.parse(parsed);
-      } catch (error: any) {
-        lastError = error;
-        const errorMsg = error.message?.toLowerCase() || '';
-        const isRetryable = errorMsg.includes('503') || errorMsg.includes('429');
-        
-        if (isRetryable && retries > 1) {
-          retries--;
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          continue;
-        }
-        throw error;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Format error');
+      return ChefChatOutputSchema.parse(JSON.parse(jsonMatch[0]));
+    } catch (error: any) {
+      const isQuotaError = error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED');
+      if (isQuotaError && attempt < RETRY_DELAY.length) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
+        attempt++;
+        continue;
       }
+      return {
+        answer: "The Alchemist is briefly stepping away from the stove. Please ask again in a minute.",
+        suggestions: ["Wait a moment"]
+      };
     }
-    throw lastError || new Error('The Alchemist is unavailable. Please try again later.');
   }
-);
+  return { answer: "Service busy.", suggestions: [] };
+}

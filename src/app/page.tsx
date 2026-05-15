@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/navbar";
 import { FlavorFlick } from "@/components/flavor-flick";
 import { PantryBuilder } from "@/components/pantry-builder";
@@ -20,7 +20,6 @@ export default function TasteFlickApp() {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  // Load from local storage
   useEffect(() => {
     const saved = localStorage.getItem('tasteflick_vault');
     if (saved) {
@@ -32,7 +31,6 @@ export default function TasteFlickApp() {
     }
   }, []);
 
-  // Save to local storage
   useEffect(() => {
     localStorage.setItem('tasteflick_vault', JSON.stringify(savedRecipes));
   }, [savedRecipes]);
@@ -45,35 +43,32 @@ export default function TasteFlickApp() {
     );
   };
 
-  const handleGenerateRecipe = async () => {
-    if (selectedIngredients.length === 0) return;
+  const handleGenerateRecipe = useCallback(async () => {
+    if (selectedIngredients.length === 0 || isGenerating) return;
     
     setIsGenerating(true);
     try {
-      // 1. Generate the recipe text
       const newRecipe = await generateRecipeFromPantry({
         ingredients: selectedIngredients
       });
       
       const recipeWithId: Recipe = {
         ...newRecipe,
-        id: Math.random().toString(36).substr(2, 9),
-        // No custom image generation, components will use their deterministic fallbacks
+        id: Math.random().toString(36).substring(2, 11),
       };
 
       setSuggestions(prev => [recipeWithId, ...prev]);
       setActiveTab("flick");
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
       toast({
-        title: "Alchemy Failed",
-        description: "The kitchen spirits are restless. Please try again.",
+        title: "Alchemy Halted",
+        description: error.message || "The kitchen spirits are busy. Try again soon.",
         variant: "destructive"
       });
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [selectedIngredients, isGenerating, toast]);
 
   const saveRecipe = (recipe: Recipe) => {
     setSavedRecipes(prev => [recipe, ...prev]);
