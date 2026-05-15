@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Recipe } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { analyzeRecipeNutrition } from "@/ai/flows/analyze-recipe-nutrition-flow";
 import { cn } from "@/lib/utils";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 interface FlavorFlickProps {
   suggestions: Recipe[];
@@ -21,6 +22,11 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
   const [isFlicking, setIsFlicking] = useState<'left' | 'right' | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Filter for food-specific placeholders
+  const foodPlaceholders = useMemo(() => 
+    PlaceHolderImages.filter(img => img.id !== 'pantry-bg'), 
+  []);
 
   const currentRecipe = suggestions[currentIndex];
 
@@ -64,7 +70,8 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
     }, 300);
   };
 
-  const placeholderUrl = `https://picsum.photos/seed/${currentRecipe.recipeName.length}/600/800`;
+  // Select a food placeholder consistently based on index
+  const placeholder = foodPlaceholders[currentIndex % foodPlaceholders.length];
 
   return (
     <div className="relative w-full max-w-md mx-auto h-[70vh] flex flex-col items-center justify-center overflow-hidden">
@@ -77,13 +84,14 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
         <Card className="h-full w-full overflow-hidden shadow-2xl border-none bg-black">
           <div className="relative h-full w-full group">
             <Image
-              src={currentRecipe.imageUrl || placeholderUrl}
+              src={currentRecipe.imageUrl || placeholder.imageUrl}
               alt={currentRecipe.recipeName}
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-90"
               priority
+              data-ai-hint={placeholder.imageHint}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
             
             <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
               <Badge className="bg-primary/90 text-white backdrop-blur-md border-none px-3 py-1 uppercase tracking-widest text-[10px] font-bold">
@@ -147,7 +155,7 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
                 className="rounded-full hover:bg-accent" 
                 onClick={() => setShowDetails(false)}
               >
-                <X className="h-6 w-6" />
+                <X className="h-6 w-6 text-foreground" />
               </Button>
             </div>
 
