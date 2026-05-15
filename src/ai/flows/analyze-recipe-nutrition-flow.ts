@@ -33,7 +33,6 @@ export async function analyzeRecipeNutrition(input: AnalyzeRecipeNutritionInput)
 
 const prompt = ai.definePrompt({
   name: 'analyzeRecipeNutritionPrompt',
-  model: 'googleai/gemini-1.5-flash',
   input: { schema: AnalyzeRecipeNutritionInputSchema },
   output: { schema: AnalyzeRecipeNutritionOutputSchema },
   prompt: `You are an expert nutritionist and food scientist. Your task is to analyze the provided recipe and estimate its nutritional density and caloric breakdown per serving.
