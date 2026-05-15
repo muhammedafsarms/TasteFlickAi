@@ -1,6 +1,24 @@
 {
   "placeholderImages": [
     {
+      "id": "indian-butter-chicken",
+      "description": "Gourmet Butter Chicken with Naan",
+      "imageUrl": "https://picsum.photos/seed/indianfood/800/600",
+      "imageHint": "indian curry"
+    },
+    {
+      "id": "biryani-gourmet",
+      "description": "Authentic Indian Biryani",
+      "imageUrl": "https://picsum.photos/seed/biryani/800/600",
+      "imageHint": "indian biryani"
+    },
+    {
+      "id": "paneer-tikka",
+      "description": "Sizzling Paneer Tikka",
+      "imageUrl": "https://picsum.photos/seed/paneer/800/600",
+      "imageHint": "paneer tikka"
+    },
+    {
       "id": "gourmet-pasta",
       "description": "Gourmet Pasta dish",
       "imageUrl": "https://picsum.photos/seed/pasta/800/600",

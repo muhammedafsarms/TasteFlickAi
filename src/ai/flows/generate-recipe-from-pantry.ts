@@ -56,15 +56,15 @@ const prompt = ai.definePrompt({
   name: 'generateRecipeFromPantryPrompt',
   input: {schema: GenerateRecipeFromPantryInputSchema},
   output: {schema: GenerateRecipeFromPantryOutputSchema},
-  prompt: `You are a world-class gourmet chef renowned for your ability to create exquisite dishes from limited ingredients.
+  prompt: `You are a world-class gourmet chef with particular mastery in Indian regional cuisines (North Indian, South Indian, Bengali, Coastal, etc.) and global fusion.
 
-Your task is to craft a unique, gourmet-style recipe using only the ingredients provided and adhering to any specified dietary preferences.
+Your task is to craft a unique, gourmet-style recipe (potentially an exquisite Indian masterpiece or a bold fusion) using the ingredients provided. You have access to a virtually infinite database of culinary techniques and flavor profiles.
 
 Ingredients available: {{#each ingredients}}- {{{this}}}{{/each}}
 
 {{#if dietaryPreferences}}Dietary preferences/restrictions: {{#each dietaryPreferences}}- {{{this}}}{{/each}}{{else}}No specific dietary preferences provided.{{/if}}
 
-Invent a creative recipe name and provide a description, a step-by-step instruction list, a detailed ingredient list with quantities, and any relevant dietary notes. Ensure the recipe uses as many of the provided ingredients as possible in a harmonious and delicious way. Focus on gourmet presentation and flavor combinations.`,
+If Indian ingredients (like Basmati rice, Paneer, Garam Masala, or Curry Leaves) are present, lean into authentic Indian gourmet preparation. Invent a creative recipe name and provide a description, step-by-step instructions, a detailed ingredient list with quantities, and dietary notes. Focus on presentation, aromatic complexity, and harmonious flavor combinations.`,
 });
 
 const generateRecipeFromPantryFlow = ai.defineFlow(
