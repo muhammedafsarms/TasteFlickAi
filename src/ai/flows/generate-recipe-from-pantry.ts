@@ -54,18 +54,23 @@ export async function generateRecipeFromPantry(
 
 const prompt = ai.definePrompt({
   name: 'generateRecipeFromPantryPrompt',
-  model: 'googleai/gemini-1.5-flash',
   input: {schema: GenerateRecipeFromPantryInputSchema},
-  output: {schema: GenerateRecipeFromPantryOutputSchema},
-  prompt: `You are a world-class gourmet chef with particular mastery in Indian regional cuisines (North Indian, South Indian, Bengali, Coastal, etc.) and global fusion.
+  prompt: `You are a world-class gourmet chef with mastery in global fusion and Indian regional cuisines.
 
-Your task is to craft a unique, gourmet-style recipe (potentially an exquisite Indian masterpiece or a bold fusion) using the ingredients provided. You have access to a virtually infinite database of culinary techniques and flavor profiles.
+Your task is to craft a unique, gourmet-style recipe using the ingredients provided.
 
 Ingredients available: {{#each ingredients}}- {{{this}}}{{/each}}
 
-{{#if dietaryPreferences}}Dietary preferences/restrictions: {{#each dietaryPreferences}}- {{{this}}}{{/each}}{{else}}No specific dietary preferences provided.{{/if}}
+{{#if dietaryPreferences}}Dietary preferences: {{#each dietaryPreferences}}- {{{this}}}{{/each}}{{/if}}
 
-If Indian ingredients (like Basmati rice, Paneer, Garam Masala, or Curry Leaves) are present, lean into authentic Indian gourmet preparation. Invent a creative recipe name and provide a description, step-by-step instructions, a detailed ingredient list with quantities, and dietary notes. Focus on presentation, aromatic complexity, and harmonious flavor combinations.`,
+Return ONLY a raw JSON object with the following structure. Do not include markdown formatting or extra text:
+{
+  "recipeName": "...",
+  "description": "...",
+  "instructions": ["step 1", "step 2", ...],
+  "ingredientsList": ["quantity item", ...],
+  "dietaryNotes": "..."
+}`,
 });
 
 const generateRecipeFromPantryFlow = ai.defineFlow(
@@ -80,9 +85,14 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
 
     while (retries > 0) {
       try {
-        const {output} = await prompt(input);
-        if (!output) throw new Error('No output from prompt');
-        return output;
+        const response = await prompt(input);
+        const text = response.text;
+        
+        // Clean markdown if present
+        const jsonString = text.replace(/```json\n?|```/g, '').trim();
+        const parsed = JSON.parse(jsonString);
+        
+        return GenerateRecipeFromPantryOutputSchema.parse(parsed);
       } catch (error: any) {
         lastError = error;
         const errorMsg = error.message?.toLowerCase() || '';
@@ -90,8 +100,7 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
                           errorMsg.includes('high demand') || 
                           errorMsg.includes('unavailable') || 
                           errorMsg.includes('rate limit') ||
-                          errorMsg.includes('429') ||
-                          errorMsg.includes('404');
+                          errorMsg.includes('429');
         
         if (isRetryable && retries > 1) {
           retries--;

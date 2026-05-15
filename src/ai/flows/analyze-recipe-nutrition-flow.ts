@@ -12,8 +12,8 @@ import { z } from 'genkit';
 
 const AnalyzeRecipeNutritionInputSchema = z.object({
   recipeName: z.string().describe('The name of the recipe.'),
-  ingredients: z.array(z.string()).describe('A list of ingredients with quantities (e.g., "2 cups flour", "1/2 tsp salt").'),
-  instructions: z.array(z.string()).describe('A list of step-by-step instructions for preparing the recipe.'),
+  ingredients: z.array(z.string()).describe('A list of ingredients with quantities.'),
+  instructions: z.array(z.string()).describe('A list of step-by-step instructions.'),
 });
 export type AnalyzeRecipeNutritionInput = z.infer<typeof AnalyzeRecipeNutritionInputSchema>;
 
@@ -22,8 +22,8 @@ const AnalyzeRecipeNutritionOutputSchema = z.object({
   proteinGrams: z.number().describe('Estimated protein in grams per serving.'),
   fatGrams: z.number().describe('Estimated fat in grams per serving.'),
   carbohydratesGrams: z.number().describe('Estimated carbohydrates in grams per serving.'),
-  nutritionalDensityDescription: z.string().describe('A descriptive summary of the recipe\'s nutritional density (e.g., "Rich in fiber and vitamins", "High in healthy fats").'),
-  notes: z.string().optional().describe('Any additional nutritional notes or dietary considerations.'),
+  nutritionalDensityDescription: z.string().describe('A descriptive summary of the recipe\'s nutritional density.'),
+  notes: z.string().optional().describe('Any additional nutritional notes.'),
 });
 export type AnalyzeRecipeNutritionOutput = z.infer<typeof AnalyzeRecipeNutritionOutputSchema>;
 
@@ -33,12 +33,8 @@ export async function analyzeRecipeNutrition(input: AnalyzeRecipeNutritionInput)
 
 const prompt = ai.definePrompt({
   name: 'analyzeRecipeNutritionPrompt',
-  model: 'googleai/gemini-1.5-flash',
   input: { schema: AnalyzeRecipeNutritionInputSchema },
-  output: { schema: AnalyzeRecipeNutritionOutputSchema },
-  prompt: `You are an expert nutritionist and food scientist. Your task is to analyze the provided recipe and estimate its nutritional density and caloric breakdown per serving.
-
-Provide the estimated calories, protein, fat, and carbohydrates in grams. Also, give a descriptive summary of its nutritional density and any additional notes.
+  prompt: `You are an expert nutritionist. Analyze the provided recipe and estimate its nutritional breakdown per serving.
 
 Recipe Name: {{{recipeName}}}
 Ingredients:
@@ -48,7 +44,15 @@ Instructions:
 {{#each instructions}}{{(@index)}}. {{{this}}}
 {{/each}}
 
-Focus on accuracy and provide a detailed yet concise analysis.`,
+Return ONLY a raw JSON object with the following structure. Do not include markdown formatting:
+{
+  "calories": number,
+  "proteinGrams": number,
+  "fatGrams": number,
+  "carbohydratesGrams": number,
+  "nutritionalDensityDescription": "...",
+  "notes": "..."
+}`,
 });
 
 const analyzeRecipeNutritionFlow = ai.defineFlow(
@@ -63,9 +67,11 @@ const analyzeRecipeNutritionFlow = ai.defineFlow(
 
     while (retries > 0) {
       try {
-        const { output } = await prompt(input);
-        if (!output) throw new Error('No output from prompt');
-        return output;
+        const response = await prompt(input);
+        const text = response.text;
+        const jsonString = text.replace(/```json\n?|```/g, '').trim();
+        const parsed = JSON.parse(jsonString);
+        return AnalyzeRecipeNutritionOutputSchema.parse(parsed);
       } catch (error: any) {
         lastError = error;
         const errorMsg = error.message?.toLowerCase() || '';
@@ -73,8 +79,7 @@ const analyzeRecipeNutritionFlow = ai.defineFlow(
                           errorMsg.includes('high demand') || 
                           errorMsg.includes('unavailable') || 
                           errorMsg.includes('rate limit') ||
-                          errorMsg.includes('429') ||
-                          errorMsg.includes('404');
+                          errorMsg.includes('429');
         
         if (isRetryable && retries > 1) {
           retries--;

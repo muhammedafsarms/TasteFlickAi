@@ -31,11 +31,9 @@ export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
 
 const prompt = ai.definePrompt({
   name: 'chefChatPrompt',
-  model: 'googleai/gemini-1.5-flash',
   input: {schema: ChefChatInputSchema},
-  output: {schema: ChefChatOutputSchema},
-  prompt: `You are the "TasteFlick Alchemist", a world-renowned gourmet chef and culinary scientist. 
-Your goal is to answer any doubts the user has about cooking, ingredients, techniques, or recipes.
+  prompt: `You are the "TasteFlick Alchemist", a world-renowned gourmet chef.
+Answer any culinary question the user has.
 
 User's Question: {{{message}}}
 
@@ -46,7 +44,11 @@ Previous context:
 {{/each}}
 {{/if}}
 
-Provide a detailed, encouraging, and highly professional answer. If the question is not about food or cooking, politely steer the conversation back to the culinary arts. Offer 2-3 brief follow-up suggestions for what they might ask next.`,
+Return ONLY a raw JSON object with the following structure. Do not include markdown formatting:
+{
+  "answer": "...",
+  "suggestions": ["...", "..."]
+}`,
 });
 
 const chefChatFlow = ai.defineFlow(
@@ -61,9 +63,11 @@ const chefChatFlow = ai.defineFlow(
 
     while (retries > 0) {
       try {
-        const {output} = await prompt(input);
-        if (!output) throw new Error('No output from prompt');
-        return output;
+        const response = await prompt(input);
+        const text = response.text;
+        const jsonString = text.replace(/```json\n?|```/g, '').trim();
+        const parsed = JSON.parse(jsonString);
+        return ChefChatOutputSchema.parse(parsed);
       } catch (error: any) {
         lastError = error;
         const errorMsg = error.message?.toLowerCase() || '';
@@ -71,8 +75,7 @@ const chefChatFlow = ai.defineFlow(
                           errorMsg.includes('high demand') || 
                           errorMsg.includes('unavailable') || 
                           errorMsg.includes('rate limit') ||
-                          errorMsg.includes('429') ||
-                          errorMsg.includes('404');
+                          errorMsg.includes('429');
         
         if (isRetryable && retries > 1) {
           retries--;
