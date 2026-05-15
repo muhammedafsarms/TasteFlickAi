@@ -23,6 +23,7 @@ const GenerateRecipeFromPantryOutputSchema = z.object({
   ingredientsList: z.array(z.string()),
   platingSuggestions: z.string(),
   dietaryNotes: z.string(),
+  imageHint: z.string().describe('A two-word description of the dish for high-quality image search (e.g., "butter chicken", "berry tart")'),
 });
 export type GenerateRecipeFromPantryOutput = z.infer<typeof GenerateRecipeFromPantryOutputSchema>;
 
@@ -39,7 +40,8 @@ export async function generateRecipeFromPantry(input: GenerateRecipeFromPantryIn
 
     CRITICAL INSTRUCTIONS:
     1. The recipeName must be exactly one, two, or three words long.
-    2. Output ONLY raw JSON matching this structure:
+    2. The imageHint must be exactly TWO words describing the visual appearance of the dish (e.g., "creamy pasta", "grilled salmon").
+    3. Output ONLY raw JSON matching this structure:
     {
       "recipeName": "string (1-3 words)",
       "description": "string",
@@ -49,7 +51,8 @@ export async function generateRecipeFromPantry(input: GenerateRecipeFromPantryIn
       "instructions": ["string"],
       "ingredientsList": ["string"],
       "platingSuggestions": "string",
-      "dietaryNotes": "string"
+      "dietaryNotes": "string",
+      "imageHint": "string (2 words)"
     }`;
 
     const completion = await groqClient.chat.completions.create({
@@ -63,7 +66,8 @@ export async function generateRecipeFromPantry(input: GenerateRecipeFromPantryIn
     if (!content) throw new Error("The Alchemist returned an empty plate.");
 
     console.log("Alchemist: Manifestation complete.");
-    return GenerateRecipeFromPantryOutputSchema.parse(JSON.parse(content));
+    const parsed = JSON.parse(content);
+    return GenerateRecipeFromPantryOutputSchema.parse(parsed);
   } catch (error: any) {
     console.error("Alchemist Error:", error);
     throw new Error(`The culinary spirits were interrupted: ${error.message}`);

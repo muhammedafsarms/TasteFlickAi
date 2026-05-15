@@ -9,7 +9,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Send, 
   User, 
-  Bot, 
   Loader2, 
   MessageSquare, 
   BookMarked, 
@@ -20,9 +19,11 @@ import {
   Star,
   Utensils
 } from "lucide-react";
+import Image from "next/image";
 import { chefChat } from "@/ai/flows/chef-chat-flow";
 import { cn } from "@/lib/utils";
 import { Recipe } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Message = {
   role: 'user' | 'model';
@@ -39,6 +40,7 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [expandedRecipeIdx, setExpandedRecipeIdx] = useState<number | null>(null);
+  const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -141,6 +143,23 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
 
                       {m.recipe && (
                         <Card className="border border-primary/20 bg-primary/5 rounded-2xl overflow-hidden shadow-sm transition-all duration-300">
+                          <div className="relative h-48 w-full">
+                            {!loadedImages[i] && (
+                              <Skeleton className="absolute inset-0 z-10 bg-muted/20 animate-pulse" />
+                            )}
+                            <Image 
+                              src={`https://picsum.photos/seed/${encodeURIComponent(m.recipe.recipeName)}/600/400`}
+                              alt={m.recipe.recipeName}
+                              fill
+                              className={cn(
+                                "object-cover transition-opacity duration-700",
+                                loadedImages[i] ? "opacity-100" : "opacity-0"
+                              )}
+                              onLoad={() => setLoadedImages(prev => ({ ...prev, [i]: true }))}
+                              data-ai-hint={m.recipe.imageHint || m.recipe.recipeName}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                          </div>
                           <CardContent className="p-4 space-y-4">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
@@ -173,7 +192,7 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
                               </div>
                             </div>
                             
-                            <p className="text-xs italic text-muted-foreground border-l-2 border-primary/30 pl-3">
+                            <p className="text-xs italic text-muted-foreground border-l-2 border-primary/30 pl-3 font-body">
                               {m.recipe.description}
                             </p>
 
@@ -186,7 +205,7 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
                                   </div>
                                   <ul className="space-y-1.5">
                                     {m.recipe.ingredientsList.map((ing: string, idx: number) => (
-                                      <li key={idx} className="text-xs flex items-center gap-2">
+                                      <li key={idx} className="text-xs flex items-center gap-2 font-body">
                                         <span className="h-1 w-1 rounded-full bg-primary/40" />
                                         {ing}
                                       </li>
@@ -203,7 +222,7 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
                                     {m.recipe.instructions.map((step: string, idx: number) => (
                                       <div key={idx} className="flex gap-3">
                                         <span className="text-sm font-headline font-bold text-primary/20">{idx + 1}</span>
-                                        <p className="text-xs leading-relaxed">{step}</p>
+                                        <p className="text-xs leading-relaxed font-body">{step}</p>
                                       </div>
                                     ))}
                                   </div>
@@ -211,7 +230,7 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
 
                                 <div className="p-3 bg-white/50 rounded-xl border border-primary/10">
                                   <h5 className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Chef's Plating Secret</h5>
-                                  <p className="text-[11px] italic text-muted-foreground leading-relaxed">
+                                  <p className="text-[11px] italic text-muted-foreground leading-relaxed font-body">
                                     {m.recipe.platingSuggestions}
                                   </p>
                                 </div>
@@ -265,4 +284,3 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
     </div>
   );
 }
-

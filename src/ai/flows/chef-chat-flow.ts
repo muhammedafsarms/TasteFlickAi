@@ -28,6 +28,7 @@ const ChefChatOutputSchema = z.object({
     ingredientsList: z.array(z.string()),
     platingSuggestions: z.string(),
     dietaryNotes: z.string(),
+    imageHint: z.string(),
   }).optional(),
 });
 export type ChefChatOutput = z.infer<typeof ChefChatOutputSchema>;
@@ -46,6 +47,7 @@ export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
         content: `You are a Michelin-star chef. Answer culinary questions. 
         If a recipe is requested, provide it in the "recipe" field of the JSON. 
         Recipe names must be 1-3 words long.
+        The "imageHint" field must be exactly TWO words describing the visual look of the dish for image search.
         Output ONLY raw JSON matching this structure:
         {
           "answer": "string",
@@ -58,7 +60,8 @@ export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
              "instructions": ["string"],
              "ingredientsList": ["string"],
              "platingSuggestions": "string",
-             "dietaryNotes": "string"
+             "dietaryNotes": "string",
+             "imageHint": "string (2 words)"
           } (optional)
         }`
       },

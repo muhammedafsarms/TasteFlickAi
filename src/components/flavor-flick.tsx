@@ -1,15 +1,16 @@
+
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Recipe } from "@/lib/types";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, Heart, Info, ChevronRight, ChevronLeft, Sparkles, Clock, ChefHat, Star } from "lucide-react";
+import { X, Heart, Clock, ChefHat, Star, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { analyzeRecipeNutrition } from "@/ai/flows/analyze-recipe-nutrition-flow";
 import { cn } from "@/lib/utils";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface FlavorFlickProps {
   suggestions: Recipe[];
@@ -22,20 +23,16 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
   const [isFlicking, setIsFlicking] = useState<'left' | 'right' | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  // Filter for food-specific placeholders
-  const foodPlaceholders = useMemo(() => 
-    PlaceHolderImages.filter(img => img.id !== 'pantry-bg'), 
-  []);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const currentRecipe = suggestions[currentIndex];
 
   if (!currentRecipe) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center p-8">
-        <Sparkles className="h-12 w-12 text-primary/40 mb-4" />
+        <Star className="h-12 w-12 text-primary/40 mb-4" />
         <h3 className="text-2xl font-headline">No More Flavour Suggestions</h3>
-        <p className="text-muted-foreground mt-2 max-w-xs">
+        <p className="text-muted-foreground mt-2 max-w-xs font-body">
           Head back to the Pantry to conjure some fresh gourmet alchemy!
         </p>
       </div>
@@ -67,11 +64,11 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
       setCurrentIndex(prev => prev + 1);
       setIsFlicking(null);
       setShowDetails(false);
+      setImageLoaded(false);
     }, 300);
   };
 
-  // Select a food placeholder consistently based on index
-  const placeholder = foodPlaceholders[currentIndex % foodPlaceholders.length];
+  const recipeImageUrl = currentRecipe.imageUrl || `https://picsum.photos/seed/${encodeURIComponent(currentRecipe.recipeName)}/800/600`;
 
   return (
     <div className="relative w-full max-w-md mx-auto h-[70vh] flex flex-col items-center justify-center overflow-hidden">
@@ -83,29 +80,34 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
       )}>
         <Card className="h-full w-full overflow-hidden shadow-2xl border-none bg-black">
           <div className="relative h-full w-full group">
+            {!imageLoaded && (
+              <Skeleton className="absolute inset-0 z-10 bg-muted/20 animate-pulse" />
+            )}
             <Image
-              src={currentRecipe.imageUrl || placeholder.imageUrl}
+              src={recipeImageUrl}
               alt={currentRecipe.recipeName}
               fill
-              className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-90"
+              className={cn(
+                "object-cover transition-all duration-700 group-hover:scale-110",
+                imageLoaded ? "opacity-90" : "opacity-0"
+              )}
               priority
-              data-ai-hint={placeholder.imageHint}
+              onLoad={() => setImageLoaded(true)}
+              data-ai-hint={currentRecipe.imageHint || currentRecipe.recipeName}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
             
-            <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
+            <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none z-20">
               <Badge className="bg-primary/90 text-white backdrop-blur-md border-none px-3 py-1 uppercase tracking-widest text-[10px] font-bold">
                 {currentRecipe.difficulty}
               </Badge>
-              <div className="flex flex-col items-end gap-1">
-                <Badge variant="secondary" className="bg-black/40 text-white backdrop-blur-md border-none flex gap-1.5 items-center">
-                  <Clock className="h-3 w-3" />
-                  {currentRecipe.prepTime} + {currentRecipe.cookTime}
-                </Badge>
-              </div>
+              <Badge variant="secondary" className="bg-black/40 text-white backdrop-blur-md border-none flex gap-1.5 items-center">
+                <Clock className="h-3 w-3" />
+                {currentRecipe.cookTime}
+              </Badge>
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+            <div className="absolute bottom-0 left-0 right-0 p-8 text-white z-20">
               <h2 className="text-4xl font-headline font-bold mb-3 leading-tight tracking-tight">
                 {currentRecipe.recipeName}
               </h2>
@@ -126,18 +128,18 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
                 <div className="flex gap-4">
                   <Button 
                     size="icon" 
-                    className="rounded-full bg-white/10 hover:bg-destructive/80 h-14 w-14 backdrop-blur-md border border-white/20"
+                    className="rounded-full bg-white/10 hover:bg-destructive/80 h-14 w-14 backdrop-blur-md border border-white/20 transition-colors"
                     onClick={() => handleFlick('left')}
                   >
                     <X className="h-8 w-8 text-white" />
                   </Button>
                   <Button 
                     size="icon" 
-                    className="rounded-full bg-primary hover:bg-primary/90 h-14 w-14 shadow-lg shadow-primary/40 border-2 border-white/20"
+                    className="rounded-full bg-primary hover:bg-primary/90 h-14 w-14 shadow-lg shadow-primary/40 border-2 border-white/20 transition-all"
                     onClick={() => handleFlick('right')}
                     disabled={isAnalyzing}
                   >
-                    <Heart className={cn("h-8 w-8 text-white", isAnalyzing && "animate-pulse")} />
+                    {isAnalyzing ? <Loader2 className="h-8 w-8 text-white animate-spin" /> : <Heart className="h-8 w-8 text-white" />}
                   </Button>
                 </div>
               </div>
@@ -146,7 +148,7 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
         </Card>
 
         {showDetails && (
-          <div className="absolute inset-0 z-20 bg-white p-8 overflow-y-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
+          <div className="absolute inset-0 z-30 bg-white p-8 overflow-y-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-3xl font-headline text-primary font-bold">Culinary Secrets</h3>
               <Button 
@@ -167,7 +169,7 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
                 </div>
                 <ul className="grid grid-cols-1 gap-3">
                   {currentRecipe.ingredientsList.map((item, idx) => (
-                    <li key={idx} className="flex items-center gap-4 text-sm p-3 rounded-xl bg-accent/30 border border-border/50">
+                    <li key={idx} className="flex items-center gap-4 text-sm p-3 rounded-xl bg-accent/30 border border-border/50 font-body">
                       <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
                       {item}
                     </li>
@@ -186,7 +188,7 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
                       <span className="text-5xl font-headline font-bold text-primary/10 italic leading-none shrink-0">
                         {idx + 1}
                       </span>
-                      <p className="text-sm leading-relaxed text-foreground/90">{step}</p>
+                      <p className="text-sm leading-relaxed text-foreground/90 font-body">{step}</p>
                     </div>
                   ))}
                 </div>
@@ -194,25 +196,13 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
 
               <section className="p-6 bg-primary/5 rounded-3xl border border-primary/20">
                 <h4 className="font-headline text-xl mb-3 text-primary italic">Plating Like a Master</h4>
-                <p className="text-sm italic leading-relaxed text-muted-foreground">
+                <p className="text-sm italic leading-relaxed text-muted-foreground font-body">
                   {currentRecipe.platingSuggestions}
                 </p>
               </section>
             </div>
           </div>
         )}
-      </div>
-
-      <div className="mt-8 flex gap-8 items-center text-muted-foreground/50">
-        <div className="flex flex-col items-center gap-1 group">
-          <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-          <span className="text-[10px] uppercase font-bold tracking-tighter">Dismiss</span>
-        </div>
-        <div className="h-px w-24 bg-border/40" />
-        <div className="flex flex-col items-center gap-1 group">
-          <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-          <span className="text-[10px] uppercase font-bold tracking-tighter">Save</span>
-        </div>
       </div>
     </div>
   );
