@@ -4,9 +4,9 @@
  * @fileOverview Culinary advice chat flow using Groq Llama 3.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai} from '../genkit';
 import {z} from 'genkit';
-import {groqClient} from '@/ai/groq-client';
+import {groqClient, isGroqConfigured} from '../groq-client';
 
 const ChefChatInputSchema = z.object({
   message: z.string(),
@@ -36,6 +36,13 @@ const chefChatFlow = ai.defineFlow(
     outputSchema: ChefChatOutputSchema,
   },
   async (input) => {
+    if (!isGroqConfigured()) {
+      return { 
+        answer: "The chef's kitchen is missing its secret key (GROQ_API_KEY). Please configure it to begin our culinary dialogue.", 
+        suggestions: ["Check API configuration"] 
+      };
+    }
+
     let attempt = 0;
 
     while (attempt <= RETRY_DELAY.length) {

@@ -4,9 +4,9 @@
  * @fileOverview Analyzes recipe nutrition using Groq Llama 3.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai} from '../genkit';
 import {z} from 'genkit';
-import {groqClient} from '@/ai/groq-client';
+import {groqClient, isGroqConfigured} from '../groq-client';
 
 const AnalyzeRecipeNutritionInputSchema = z.object({
   recipeName: z.string(),
@@ -38,6 +38,10 @@ const analyzeRecipeNutritionFlow = ai.defineFlow(
     outputSchema: AnalyzeRecipeNutritionOutputSchema,
   },
   async (input) => {
+    if (!isGroqConfigured()) {
+      throw new Error("Groq API key is not configured.");
+    }
+
     let attempt = 0;
 
     while (attempt <= RETRY_DELAY.length) {

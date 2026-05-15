@@ -8,9 +8,9 @@
  * - GenerateRecipeFromPantryOutput - The return type.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai} from '../genkit';
 import {z} from 'genkit';
-import {groqClient} from '@/ai/groq-client';
+import {groqClient, isGroqConfigured} from '../groq-client';
 
 const GenerateRecipeFromPantryInputSchema = z.object({
   ingredients: z.array(z.string()),
@@ -40,6 +40,10 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
     outputSchema: GenerateRecipeFromPantryOutputSchema,
   },
   async (input) => {
+    if (!isGroqConfigured()) {
+      throw new Error("Groq API key is not configured. Please set GROQ_API_KEY in your environment.");
+    }
+
     let attempt = 0;
     
     while (attempt <= RETRY_DELAY.length) {
@@ -82,7 +86,7 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
           attempt++;
           continue;
         }
-        throw new Error(isQuotaError ? "The kitchen is currently busy. Please try again soon." : "Failed to manifest recipe. Please check your ingredients.");
+        throw new Error(isQuotaError ? "The kitchen is currently busy. Please try again soon." : "Failed to manifest recipe. Please check your ingredients or API configuration.");
       }
     }
     throw new Error("Service busy.");
