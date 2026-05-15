@@ -1,10 +1,11 @@
+
 'use server';
 /**
  * @fileOverview Generates highly detailed gourmet recipes from pantry ingredients using Genkit Prompts.
  */
 
 import { ai } from '../genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const GenerateRecipeFromPantryInputSchema = z.object({
   ingredients: z.array(z.string()),
@@ -35,7 +36,7 @@ Create an incredibly detailed, unique gourmet recipe based on the provided ingre
 Focus on technique and complex flavour profiles.
 
 {{#if dietaryPreferences}}
-STRICT DIETARY CONSTRAINTS: {{{dietaryPreferences}}}
+STRICT DIETARY CONSTRAINTS: {{#each dietaryPreferences}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 {{/if}}
 
 Ingredients available:
@@ -43,10 +44,14 @@ Ingredients available:
 - {{{this}}}
 {{/each}}
 
-For the recipe name, create a descriptive, evocative, and technically accurate gourmet name that is EXACTLY one, two, or three words long.`,
+CRITICAL INSTRUCTIONS:
+1. For the recipe name, create a descriptive, evocative, and technically accurate gourmet name that is EXACTLY one, two, or three words long.
+2. The "difficulty" field MUST be exactly one of: "Beginner", "Intermediate", "Advanced", or "Master" (case-sensitive).
+3. Ensure the output is valid JSON matching the schema provided.`,
 });
 
 export async function generateRecipeFromPantry(input: GenerateRecipeFromPantryInput): Promise<GenerateRecipeFromPantryOutput> {
+  console.log("Alchemist: Starting pantry manifestation for ingredients:", input.ingredients);
   return generateRecipeFromPantryFlow(input);
 }
 
@@ -59,11 +64,15 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
   async (input) => {
     try {
       const { output } = await recipePrompt(input);
-      if (!output) throw new Error('The Alchemist failed to manifest a vision.');
+      if (!output) {
+        console.error("Alchemist: Empty output from prompt.");
+        throw new Error('The Alchemist failed to manifest a vision.');
+      }
+      console.log("Alchemist: Successfully manifested recipe:", output.recipeName);
       return output;
     } catch (error: any) {
-      console.error("Alchemy Error:", error);
-      throw new Error(`Failed to manifest recipe: ${error.message}`);
+      console.error("Alchemy Error during manifestation:", error);
+      throw new Error(`The culinary spirits were interrupted: ${error.message}`);
     }
   }
 );

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -47,11 +48,15 @@ export default function TasteFlickApp() {
     if (selectedIngredients.length === 0 || isGenerating) return;
     
     setIsGenerating(true);
+    console.log("Client: Initiating recipe manifestation...");
+    
     try {
       const newRecipe = await generateRecipeFromPantry({
         ingredients: selectedIngredients,
         dietaryPreferences: dietary
       });
+      
+      console.log("Client: Recipe received successfully:", newRecipe.recipeName);
       
       const recipeWithId: Recipe = {
         ...newRecipe,
@@ -61,6 +66,7 @@ export default function TasteFlickApp() {
       setSuggestions(prev => [recipeWithId, ...prev]);
       setActiveTab("flick");
     } catch (error: any) {
+      console.error("Client: Alchemy failed:", error);
       toast({
         title: "Alchemy Halted",
         description: error.message || "The kitchen spirits are busy. Try again soon.",
