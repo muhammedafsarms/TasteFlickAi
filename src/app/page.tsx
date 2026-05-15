@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -9,7 +10,6 @@ import { GroceryGenerator } from "@/components/grocery-generator";
 import { ChefChat } from "@/components/chef-chat";
 import { Recipe } from "@/lib/types";
 import { generateRecipeFromPantry } from "@/ai/flows/generate-recipe-from-pantry";
-import { generateRecipeImage } from "@/ai/flows/generate-recipe-image-flow";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Loader2 } from "lucide-react";
 
@@ -54,15 +54,8 @@ export default function TasteFlickApp() {
         ingredients: selectedIngredients
       });
       
-      // Step 2: Generate Gourmet AI Image
-      const imageResult = await generateRecipeImage({
-        recipeName: newRecipe.recipeName,
-        description: newRecipe.description
-      });
-
       const recipeWithId: Recipe = {
         ...newRecipe,
-        imageUrl: imageResult.imageUrl,
         id: Math.random().toString(36).substring(2, 11),
       };
 
