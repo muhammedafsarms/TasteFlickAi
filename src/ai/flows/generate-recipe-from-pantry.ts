@@ -52,7 +52,7 @@ export async function generateRecipeFromPantry(input: GenerateRecipeFromPantryIn
       "ingredientsList": ["string"],
       "platingSuggestions": "string",
       "dietaryNotes": "string",
-      "imageHint": "string (2 words)"
+      "imageHint": "string (exactly 2 words for visual search)"
     }`;
 
     const completion = await groqClient.chat.completions.create({

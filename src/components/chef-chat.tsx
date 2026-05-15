@@ -24,6 +24,7 @@ import { chefChat } from "@/ai/flows/chef-chat-flow";
 import { cn } from "@/lib/utils";
 import { Recipe } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getRecipeImageData } from "@/lib/image-utils";
 
 type Message = {
   role: 'user' | 'model';
@@ -90,9 +91,12 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
   const handleSaveRecipe = (recipeData: any) => {
     if (!onSaveRecipe) return;
     
+    const imageData = getRecipeImageData(recipeData.recipeName, recipeData.imageHint);
     const recipe: Recipe = {
       ...recipeData,
       id: Math.random().toString(36).substring(2, 11),
+      imageUrl: imageData.url,
+      imageHint: imageData.hint
     };
     onSaveRecipe(recipe);
   };
@@ -147,17 +151,22 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
                             {!loadedImages[i] && (
                               <Skeleton className="absolute inset-0 z-10 bg-muted/20 animate-pulse" />
                             )}
-                            <Image 
-                              src={`https://picsum.photos/seed/${encodeURIComponent(m.recipe.recipeName)}/600/400`}
-                              alt={m.recipe.recipeName}
-                              fill
-                              className={cn(
-                                "object-cover transition-opacity duration-700",
-                                loadedImages[i] ? "opacity-100" : "opacity-0"
-                              )}
-                              onLoad={() => setLoadedImages(prev => ({ ...prev, [i]: true }))}
-                              data-ai-hint={m.recipe.imageHint || m.recipe.recipeName}
-                            />
+                            {(() => {
+                              const imageData = getRecipeImageData(m.recipe.recipeName, m.recipe.imageHint);
+                              return (
+                                <Image 
+                                  src={imageData.url}
+                                  alt={m.recipe.recipeName}
+                                  fill
+                                  className={cn(
+                                    "object-cover transition-opacity duration-700",
+                                    loadedImages[i] ? "opacity-100" : "opacity-0"
+                                  )}
+                                  onLoad={() => setLoadedImages(prev => ({ ...prev, [i]: true }))}
+                                  data-ai-hint={imageData.hint}
+                                />
+                              );
+                            })()}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                           </div>
                           <CardContent className="p-4 space-y-4">

@@ -47,12 +47,12 @@ export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
         content: `You are a Michelin-star chef. Answer culinary questions. 
         If a recipe is requested, provide it in the "recipe" field of the JSON. 
         Recipe names must be 1-3 words long.
-        The "imageHint" field must be exactly TWO words describing the visual look of the dish for image search.
+        The "imageHint" field must be exactly TWO words describing the visual look of the dish for image search (e.g. 'seared steak', 'green curry').
         Output ONLY raw JSON matching this structure:
         {
           "answer": "string",
           "recipe": {
-             "recipeName": "string",
+             "recipeName": "string (1-3 words)",
              "description": "string",
              "prepTime": "string",
              "cookTime": "string",
@@ -61,7 +61,7 @@ export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
              "ingredientsList": ["string"],
              "platingSuggestions": "string",
              "dietaryNotes": "string",
-             "imageHint": "string (2 words)"
+             "imageHint": "string (exactly 2 words)"
           } (optional)
         }`
       },

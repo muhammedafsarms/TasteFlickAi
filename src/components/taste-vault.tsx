@@ -10,6 +10,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { getRecipeImageData } from "@/lib/image-utils";
 
 interface TasteVaultProps {
   recipes: Recipe[];
@@ -45,7 +46,7 @@ export function TasteVault({ recipes, onRemove }: TasteVaultProps) {
 
       <div className="grid gap-8">
         {recipes.map((recipe) => {
-          const recipeImageUrl = recipe.imageUrl || `https://picsum.photos/seed/${encodeURIComponent(recipe.recipeName)}/800/600`;
+          const imageData = getRecipeImageData(recipe.recipeName, recipe.imageHint);
           
           return (
             <Card key={recipe.id} className="overflow-hidden border-none shadow-2xl bg-white flex flex-col rounded-[2rem]">
@@ -54,7 +55,7 @@ export function TasteVault({ recipes, onRemove }: TasteVaultProps) {
                   <Skeleton className="absolute inset-0 z-10 bg-muted/20 animate-pulse" />
                 )}
                 <Image 
-                  src={recipeImageUrl} 
+                  src={recipe.imageUrl || imageData.url} 
                   alt={recipe.recipeName}
                   fill
                   className={cn(
@@ -62,7 +63,7 @@ export function TasteVault({ recipes, onRemove }: TasteVaultProps) {
                     loadedImages[recipe.id] ? "opacity-100" : "opacity-0"
                   )}
                   onLoad={() => handleImageLoad(recipe.id)}
-                  data-ai-hint={recipe.imageHint || recipe.recipeName}
+                  data-ai-hint={recipe.imageHint || imageData.hint}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
                 <div className="absolute top-4 left-6 flex gap-2">

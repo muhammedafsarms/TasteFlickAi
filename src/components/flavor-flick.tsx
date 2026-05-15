@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Recipe } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { analyzeRecipeNutrition } from "@/ai/flows/analyze-recipe-nutrition-flow";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getRecipeImageData } from "@/lib/image-utils";
 
 interface FlavorFlickProps {
   suggestions: Recipe[];
@@ -27,7 +28,12 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
 
   const currentRecipe = suggestions[currentIndex];
 
-  if (!currentRecipe) {
+  const imageData = useMemo(() => {
+    if (!currentRecipe) return null;
+    return getRecipeImageData(currentRecipe.recipeName, currentRecipe.imageHint);
+  }, [currentRecipe]);
+
+  if (!currentRecipe || !imageData) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center p-8">
         <Star className="h-12 w-12 text-primary/40 mb-4" />
@@ -51,9 +57,9 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
             ingredients: currentRecipe.ingredientsList,
             instructions: currentRecipe.instructions
           });
-          onSave({ ...currentRecipe, nutrition });
+          onSave({ ...currentRecipe, nutrition, imageUrl: imageData.url });
         } catch (e) {
-          onSave(currentRecipe);
+          onSave({ ...currentRecipe, imageUrl: imageData.url });
         } finally {
           setIsAnalyzing(false);
         }
@@ -67,8 +73,6 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
       setImageLoaded(false);
     }, 300);
   };
-
-  const recipeImageUrl = currentRecipe.imageUrl || `https://picsum.photos/seed/${encodeURIComponent(currentRecipe.recipeName)}/800/600`;
 
   return (
     <div className="relative w-full max-w-md mx-auto h-[70vh] flex flex-col items-center justify-center overflow-hidden">
@@ -84,7 +88,7 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
               <Skeleton className="absolute inset-0 z-10 bg-muted/20 animate-pulse" />
             )}
             <Image
-              src={recipeImageUrl}
+              src={imageData.url}
               alt={currentRecipe.recipeName}
               fill
               className={cn(
@@ -93,7 +97,7 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
               )}
               priority
               onLoad={() => setImageLoaded(true)}
-              data-ai-hint={currentRecipe.imageHint || currentRecipe.recipeName}
+              data-ai-hint={imageData.hint}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
             
