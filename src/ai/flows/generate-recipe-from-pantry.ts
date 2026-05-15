@@ -27,7 +27,7 @@ const GenerateRecipeFromPantryOutputSchema = z.object({
 });
 export type GenerateRecipeFromPantryOutput = z.infer<typeof GenerateRecipeFromPantryOutputSchema>;
 
-const RETRY_DELAY = [2000, 5000, 10000];
+const RETRY_DELAY = [2000, 5000];
 
 export async function generateRecipeFromPantry(input: GenerateRecipeFromPantryInput): Promise<GenerateRecipeFromPantryOutput> {
   return generateRecipeFromPantryFlow(input);
@@ -40,6 +40,8 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
     outputSchema: GenerateRecipeFromPantryOutputSchema,
   },
   async (input) => {
+    console.log("Alchemist: Manifesting recipe for ingredients:", input.ingredients.join(", "));
+    
     if (!isGroqConfigured()) {
       throw new Error("Groq API key is not configured. Please set GROQ_API_KEY in your environment.");
     }
@@ -48,12 +50,13 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
     
     while (attempt <= RETRY_DELAY.length) {
       try {
+        console.log(`Alchemist: Requesting completion (Attempt ${attempt + 1})...`);
         const completion = await groqClient.chat.completions.create({
           model: 'llama-3.3-70b-versatile',
           messages: [
             {
               role: 'system',
-              content: 'You are a world-class Michelin-star chef. Create an incredibly detailed, unique gourmet recipe based on the provided ingredients. Focus on technique and flavour profiles. Output ONLY raw JSON.'
+              content: 'You are a world-class Michelin-star chef. Create an incredibly detailed, unique gourmet recipe based on the provided ingredients. Focus on technique and flavour profiles. Output ONLY valid JSON.'
             },
             {
               role: 'user',
@@ -63,34 +66,48 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
               Return JSON exactly in this format:
               {
                 "recipeName": "Creative Name",
-                "description": "Eloquent description of the dish and its soul",
+                "description": "Eloquent description",
                 "prepTime": "XX mins",
                 "cookTime": "XX mins",
                 "difficulty": "Intermediate",
-                "instructions": ["Detailed step 1 with culinary techniques", "Step 2..."],
+                "instructions": ["Step 1", "Step 2..."],
                 "ingredientsList": ["Quantity + Ingredient name", "..."],
-                "platingSuggestions": "Detailed advice on how to plate this like a pro",
-                "dietaryNotes": "Nutritional or dietary context"
+                "platingSuggestions": "Advice",
+                "dietaryNotes": "Context"
               }`
             }
           ],
           temperature: 0.7,
-          max_tokens: 1500,
+          max_tokens: 2048,
           response_format: { type: 'json_object' }
         });
 
         const content = completion.choices[0]?.message?.content;
-        if (!content) throw new Error('No content returned from Groq');
+        console.log("Alchemist: Raw response received:", content?.substring(0, 100) + "...");
+
+        if (!content) {
+          throw new Error('Alchemist received an empty vision.');
+        }
         
-        return GenerateRecipeFromPantryOutputSchema.parse(JSON.parse(content));
+        try {
+          const parsed = JSON.parse(content);
+          return GenerateRecipeFromPantryOutputSchema.parse(parsed);
+        } catch (parseError) {
+          console.error("Alchemist: JSON parsing/validation failed:", parseError);
+          throw new Error("The Alchemist's recipe was illegible.");
+        }
+        
       } catch (error: any) {
+        console.error(`Alchemist Error (Attempt ${attempt + 1}):`, error.message || error);
+        
         const isQuotaError = error.status === 429;
         if (isQuotaError && attempt < RETRY_DELAY.length) {
+          console.warn(`Alchemist: Rate limited. Retrying in ${RETRY_DELAY[attempt]}ms...`);
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
           attempt++;
           continue;
         }
-        throw new Error(isQuotaError ? "The kitchen is currently busy. Please try again soon." : "Failed to manifest recipe. Please check your ingredients or API configuration.");
+        throw new Error(isQuotaError ? "The kitchen is currently busy. Please try again soon." : `Failed to manifest recipe: ${error.message}`);
       }
     }
     throw new Error("Service busy.");

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -5,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, User, Bot, Loader2, Sparkles, MessageSquare } from "lucide-react";
+import { Send, User, Bot, Loader2, MessageSquare } from "lucide-react";
 import { chefChat } from "@/ai/flows/chef-chat-flow";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +23,10 @@ export function ChefChat() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
     }
   }, [messages, isLoading]);
 
@@ -31,18 +35,32 @@ export function ChefChat() {
 
     const userMessage = input.trim();
     setInput("");
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    
+    const newMessages = [...messages, { role: 'user', content: userMessage } as Message];
+    setMessages(newMessages);
     setIsLoading(true);
 
     try {
+      console.log("UI: Sending chat request to Alchemist...");
+      // Map 'model' to 'assistant' for the backend history
+      const historyForBackend = messages.map(m => ({
+        role: m.role === 'model' ? 'assistant' as const : 'user' as const,
+        content: m.content
+      }));
+
       const response = await chefChat({
         message: userMessage,
-        history: messages
+        history: historyForBackend
       });
 
+      console.log("UI: Received response from Alchemist:", response);
       setMessages(prev => [...prev, { role: 'model', content: response.answer }]);
-    } catch (error) {
-      setMessages(prev => [...prev, { role: 'model', content: "Forgive me, my culinary scrolls are a bit tangled. Please ask again." }]);
+    } catch (error: any) {
+      console.error("UI: Chat interaction failed:", error);
+      setMessages(prev => [...prev, { 
+        role: 'model', 
+        content: `Forgive me, my culinary scrolls are a bit tangled. (Technical insight: ${error.message || "The connection was severed"})` 
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +97,7 @@ export function ChefChat() {
                       {m.role === 'user' ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5 text-secondary" />}
                     </div>
                     <div className={cn(
-                      "p-4 rounded-2xl text-sm leading-relaxed font-body shadow-sm",
+                      "p-4 rounded-2xl text-sm leading-relaxed font-body shadow-sm whitespace-pre-wrap",
                       m.role === 'user' 
                         ? "bg-primary text-primary-foreground rounded-tr-none" 
                         : "bg-muted/50 text-foreground rounded-tl-none"
