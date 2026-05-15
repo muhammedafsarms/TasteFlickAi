@@ -69,7 +69,11 @@ const analyzeRecipeNutritionFlow = ai.defineFlow(
       } catch (error: any) {
         lastError = error;
         const errorMsg = error.message?.toLowerCase() || '';
-        const isRetryable = errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('unavailable') || errorMsg.includes('rate limit');
+        const isRetryable = errorMsg.includes('503') || 
+                          errorMsg.includes('high demand') || 
+                          errorMsg.includes('unavailable') || 
+                          errorMsg.includes('rate limit') ||
+                          errorMsg.includes('429');
         
         if (isRetryable && retries > 1) {
           retries--;
