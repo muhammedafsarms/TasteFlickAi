@@ -49,7 +49,6 @@ export default function TasteFlickApp() {
     
     setIsGenerating(true);
     try {
-      // Step 1: Generate Detailed Recipe Text
       const newRecipe = await generateRecipeFromPantry({
         ingredients: selectedIngredients
       });
@@ -73,7 +72,11 @@ export default function TasteFlickApp() {
   }, [selectedIngredients, isGenerating, toast]);
 
   const saveRecipe = (recipe: Recipe) => {
-    setSavedRecipes(prev => [{ ...recipe, savedAt: Date.now() }, ...prev]);
+    setSavedRecipes(prev => {
+      // Prevent duplicates
+      if (prev.some(r => r.recipeName === recipe.recipeName)) return prev;
+      return [{ ...recipe, savedAt: Date.now() }, ...prev];
+    });
     setSuggestions(prev => prev.filter(r => r.id !== recipe.id));
     toast({
       title: "Recipe Saved",
@@ -124,7 +127,7 @@ export default function TasteFlickApp() {
         )}
 
         {activeTab === "chat" && (
-          <ChefChat />
+          <ChefChat onSaveRecipe={saveRecipe} />
         )}
 
         {activeTab === "grocery" && (

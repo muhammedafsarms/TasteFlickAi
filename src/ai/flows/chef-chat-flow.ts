@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Culinary advice chat flow using Groq Llama 3.
+ * @fileOverview Culinary advice and recipe manifestation chat flow using Groq Llama 3.
  */
 
 import {ai} from '../genkit';
@@ -20,6 +20,17 @@ export type ChefChatInput = z.infer<typeof ChefChatInputSchema>;
 const ChefChatOutputSchema = z.object({
   answer: z.string(),
   suggestions: z.array(z.string()).optional(),
+  recipe: z.object({
+    recipeName: z.string(),
+    description: z.string(),
+    prepTime: z.string(),
+    cookTime: z.string(),
+    difficulty: z.enum(['Beginner', 'Intermediate', 'Advanced', 'Master']),
+    instructions: z.array(z.string()),
+    ingredientsList: z.array(z.string()),
+    platingSuggestions: z.string(),
+    dietaryNotes: z.string(),
+  }).optional(),
 });
 export type ChefChatOutput = z.infer<typeof ChefChatOutputSchema>;
 
@@ -36,11 +47,11 @@ const chefChatFlow = ai.defineFlow(
     outputSchema: ChefChatOutputSchema,
   },
   async (input) => {
-    console.log("Chef's Table: Received message:", input.message);
+    console.log("Chef's Table: Manifesting response for:", input.message);
     
     if (!isGroqConfigured()) {
       return { 
-        answer: "The chef's kitchen is missing its secret key (GROQ_API_KEY). Please configure it to begin our culinary dialogue.", 
+        answer: "The chef's kitchen is missing its secret key. Please configure GROQ_API_KEY to begin our culinary dialogue.", 
         suggestions: ["Check API configuration"] 
       };
     }
@@ -54,14 +65,20 @@ const chefChatFlow = ai.defineFlow(
           content: h.content
         })) || [];
 
-        console.log(`Chef's Table: Sending request (Attempt ${attempt + 1})...`);
-
         const completion = await groqClient.chat.completions.create({
           model: 'llama-3.3-70b-versatile',
           messages: [
             {
               role: 'system',
-              content: 'You are a world-class chef. Provide concise, helpful culinary advice. You must respond in a valid JSON object format with two fields: "answer" (string) and "suggestions" (array of strings).'
+              content: `You are a world-class Michelin-star chef. 
+              If the user asks for a recipe, provide a detailed, unique gourmet manifestation. 
+              If the user asks for advice, provide eloquent and helpful culinary wisdom.
+              
+              You MUST respond in a valid JSON object format with these fields:
+              - "answer": (string) Your conversational response or the recipe narrative.
+              - "suggestions": (array of strings) 2-3 follow-up questions or related topics.
+              - "recipe": (optional object) Only include this if a recipe is requested. 
+                Fields: recipeName, description, prepTime, cookTime, difficulty (Beginner/Intermediate/Advanced/Master), instructions (array), ingredientsList (array of quantity+item), platingSuggestions, dietaryNotes.`
             },
             ...historyMessages as any,
             {
@@ -70,45 +87,40 @@ const chefChatFlow = ai.defineFlow(
             }
           ],
           temperature: 0.7,
-          max_tokens: 1024,
+          max_tokens: 2048,
           response_format: { type: 'json_object' }
         });
 
         const content = completion.choices[0]?.message?.content;
-        console.log("Chef's Table: Raw response received:", content);
-
-        if (!content) {
-          throw new Error('Chef received an empty plate (no response content).');
-        }
+        if (!content) throw new Error('Chef received an empty plate.');
         
         try {
           const data = JSON.parse(content);
           return {
             answer: data.answer || "I'm sorry, I couldn't process that culinary request.",
-            suggestions: data.suggestions || []
+            suggestions: data.suggestions || [],
+            recipe: data.recipe || undefined
           };
         } catch (parseError) {
-          console.error("Chef's Table: JSON Parsing failed:", parseError, "Content:", content);
+          console.error("Chef's Table: JSON Parsing failed:", parseError);
           throw new Error('The chef spoke in riddles (invalid JSON response).');
         }
 
       } catch (error: any) {
-        console.error(`Chef's Table Error (Attempt ${attempt + 1}):`, error.message || error);
+        console.error(`Chef's Table Error (Attempt ${attempt + 1}):`, error.message);
         
-        const isQuotaError = error.status === 429;
-        if (isQuotaError && attempt < RETRY_DELAY.length) {
-          console.warn(`Chef's Table: Rate limited. Retrying in ${RETRY_DELAY[attempt]}ms...`);
+        if (error.status === 429 && attempt < RETRY_DELAY.length) {
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
           attempt++;
           continue;
         }
 
         return {
-          answer: `The chef is briefly away from the table. (Error: ${error.message || "Unknown culinary mishap"})`,
+          answer: `The kitchen is briefly overwhelmed. (Error: ${error.message || "Unknown mishap"})`,
           suggestions: ["Try again in a moment"]
         };
       }
     }
-    return { answer: "The kitchen is currently overwhelmed. Please try again later.", suggestions: [] };
+    return { answer: "The kitchen is currently closed for cleaning. Please try again later.", suggestions: [] };
   }
 );
