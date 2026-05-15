@@ -1,3 +1,40 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "gourmet-pasta",
+      "description": "Gourmet Pasta dish",
+      "imageUrl": "https://picsum.photos/seed/pasta/800/600",
+      "imageHint": "gourmet pasta"
+    },
+    {
+      "id": "fresh-salad",
+      "description": "Healthy green salad",
+      "imageUrl": "https://picsum.photos/seed/salad/800/600",
+      "imageHint": "fresh salad"
+    },
+    {
+      "id": "roasted-chicken",
+      "description": "Succulent roasted chicken",
+      "imageUrl": "https://picsum.photos/seed/chicken/800/600",
+      "imageHint": "roasted chicken"
+    },
+    {
+      "id": "dessert-cake",
+      "description": "Decadent chocolate cake",
+      "imageUrl": "https://picsum.photos/seed/cake/800/600",
+      "imageHint": "chocolate cake"
+    },
+    {
+      "id": "avocado-toast",
+      "description": "Artisanal avocado toast",
+      "imageUrl": "https://picsum.photos/seed/avocado/800/600",
+      "imageHint": "avocado toast"
+    },
+    {
+      "id": "pantry-bg",
+      "description": "A well-stocked rustic pantry",
+      "imageUrl": "https://picsum.photos/seed/pantry/1200/800",
+      "imageHint": "rustic pantry"
+    }
+  ]
 }

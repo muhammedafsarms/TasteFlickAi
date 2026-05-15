@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -10,8 +11,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        body: ['PT Sans', 'sans-serif'],
+        headline: ['Playfair Display', 'serif'],
         code: ['monospace'],
       },
       colors: {
@@ -88,10 +89,25 @@ export default {
             height: '0',
           },
         },
+        'flick-right': {
+          '0%': { transform: 'translateX(0) rotate(0)', opacity: '1' },
+          '100%': { transform: 'translateX(200px) rotate(15deg)', opacity: '0' },
+        },
+        'flick-left': {
+          '0%': { transform: 'translateX(0) rotate(0)', opacity: '1' },
+          '100%': { transform: 'translateX(-200px) rotate(-15deg)', opacity: '0' },
+        },
+        'appear': {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'flick-right': 'flick-right 0.3s ease-in forwards',
+        'flick-left': 'flick-left 0.3s ease-in forwards',
+        'appear': 'appear 0.4s ease-out forwards',
       },
     },
   },
