@@ -1,10 +1,5 @@
-import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 
 /**
- * @fileOverview Genkit initialization.
+ * @fileOverview This file is now deprecated. All AI logic has migrated to Groq via groq-client.ts.
  */
-export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-1.5-flash', // Switched to 1.5-flash for better free tier reliability
-});
+export const ai = null;
