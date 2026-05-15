@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Culinary advice and recipe manifestation chat flow using Groq Llama 3.
@@ -74,6 +73,7 @@ const chefChatFlow = ai.defineFlow(
               
               - If the user asks for a recipe, provide a highly detailed, gourmet manifestation. The "recipe" object MUST be complete with specific measurements, complex techniques, and exquisite plating advice.
               - If the user asks for advice, provide eloquent, helpful culinary wisdom.
+              - For any "recipeName", create a descriptive, evocative, and technically accurate gourmet name that reflects the dish's soul.
               
               STRICT FORMATTING:
               You MUST respond in a valid JSON object format with these fields:
@@ -126,4 +126,3 @@ const chefChatFlow = ai.defineFlow(
     return { answer: "The kitchen is currently closed for cleaning. Please try again later.", suggestions: [] };
   }
 );
-

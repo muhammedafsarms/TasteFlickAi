@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Generates highly detailed gourmet recipes from pantry ingredients using Groq Llama 3.
@@ -56,7 +55,7 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
           messages: [
             {
               role: 'system',
-              content: 'You are a world-class Michelin-star chef. Create an incredibly detailed, unique gourmet recipe based on the provided ingredients. Focus on technique and flavour profiles. Output ONLY valid JSON.'
+              content: 'You are a world-class Michelin-star chef. Create an incredibly detailed, unique gourmet recipe based on the provided ingredients. Focus on technique and flavour profiles. For the recipe name, create a descriptive, evocative, and technically accurate gourmet name. Output ONLY valid JSON.'
             },
             {
               role: 'user',
@@ -65,7 +64,7 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
               
               Return JSON exactly in this format:
               {
-                "recipeName": "Creative Name",
+                "recipeName": "A descriptive, evocative, and technically accurate gourmet name",
                 "description": "Eloquent description",
                 "prepTime": "XX mins",
                 "cookTime": "XX mins",
