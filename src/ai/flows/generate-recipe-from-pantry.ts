@@ -10,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
+import {googleAI} from '@genkit-ai/google-genai';
 
 const GenerateRecipeFromPantryInputSchema = z.object({
   ingredients: z
@@ -56,7 +56,7 @@ export async function generateRecipeFromPantry(
 
 const prompt = ai.definePrompt({
   name: 'generateRecipeFromPantryPrompt',
-  model: googleAI.model('gemini-2.0-flash'),
+  model: 'googleai/gemini-2.0-flash',
   input: {schema: GenerateRecipeFromPantryInputSchema},
   prompt: `You are a world-class gourmet chef with mastery in global fusion and Indian regional cuisines.
 
@@ -91,8 +91,11 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
         const response = await prompt(input);
         const text = response.text;
         
-        // Clean markdown if present
-        const jsonString = text.replace(/```json\n?|```/g, '').trim();
+        // Robust JSON extraction
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('No JSON found in response');
+        
+        const jsonString = jsonMatch[0];
         const parsed = JSON.parse(jsonString);
         
         return GenerateRecipeFromPantryOutputSchema.parse(parsed);

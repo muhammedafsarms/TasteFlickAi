@@ -10,7 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const AnalyzeRecipeNutritionInputSchema = z.object({
   recipeName: z.string().describe('The name of the recipe.'),
@@ -35,7 +35,7 @@ export async function analyzeRecipeNutrition(input: AnalyzeRecipeNutritionInput)
 
 const prompt = ai.definePrompt({
   name: 'analyzeRecipeNutritionPrompt',
-  model: googleAI.model('gemini-2.0-flash'),
+  model: 'googleai/gemini-2.0-flash',
   input: { schema: AnalyzeRecipeNutritionInputSchema },
   prompt: `You are an expert nutritionist. Analyze the provided recipe and estimate its nutritional breakdown per serving.
 
@@ -72,7 +72,11 @@ const analyzeRecipeNutritionFlow = ai.defineFlow(
       try {
         const response = await prompt(input);
         const text = response.text;
-        const jsonString = text.replace(/```json\n?|```/g, '').trim();
+        
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('No JSON found in response');
+        
+        const jsonString = jsonMatch[0];
         const parsed = JSON.parse(jsonString);
         return AnalyzeRecipeNutritionOutputSchema.parse(parsed);
       } catch (error: any) {

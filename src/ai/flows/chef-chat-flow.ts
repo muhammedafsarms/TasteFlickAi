@@ -10,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const ChefChatInputSchema = z.object({
   message: z.string().describe('The user\'s question or doubt about cooking.'),
@@ -33,7 +33,7 @@ export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
 
 const prompt = ai.definePrompt({
   name: 'chefChatPrompt',
-  model: googleAI.model('gemini-2.0-flash'),
+  model: 'googleai/gemini-2.0-flash',
   input: {schema: ChefChatInputSchema},
   prompt: `You are the "TasteFlick Alchemist", a world-renowned gourmet chef.
 Answer any culinary question the user has.
@@ -68,7 +68,11 @@ const chefChatFlow = ai.defineFlow(
       try {
         const response = await prompt(input);
         const text = response.text;
-        const jsonString = text.replace(/```json\n?|```/g, '').trim();
+        
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('No JSON found in response');
+        
+        const jsonString = jsonMatch[0];
         const parsed = JSON.parse(jsonString);
         return ChefChatOutputSchema.parse(parsed);
       } catch (error: any) {
