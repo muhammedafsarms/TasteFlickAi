@@ -31,7 +31,7 @@ export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
 
 const prompt = ai.definePrompt({
   name: 'chefChatPrompt',
-  model: 'googleai/gemini-1.5-flash',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: ChefChatInputSchema},
   output: {schema: ChefChatOutputSchema},
   prompt: `You are the "TasteFlick Alchemist", a world-renowned gourmet chef and culinary scientist. 
@@ -71,7 +71,8 @@ const chefChatFlow = ai.defineFlow(
                           errorMsg.includes('high demand') || 
                           errorMsg.includes('unavailable') || 
                           errorMsg.includes('rate limit') ||
-                          errorMsg.includes('429');
+                          errorMsg.includes('429') ||
+                          errorMsg.includes('404');
         
         if (isRetryable && retries > 1) {
           retries--;

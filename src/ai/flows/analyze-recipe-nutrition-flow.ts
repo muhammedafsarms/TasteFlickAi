@@ -33,7 +33,7 @@ export async function analyzeRecipeNutrition(input: AnalyzeRecipeNutritionInput)
 
 const prompt = ai.definePrompt({
   name: 'analyzeRecipeNutritionPrompt',
-  model: 'googleai/gemini-1.5-flash',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: { schema: AnalyzeRecipeNutritionInputSchema },
   output: { schema: AnalyzeRecipeNutritionOutputSchema },
   prompt: `You are an expert nutritionist and food scientist. Your task is to analyze the provided recipe and estimate its nutritional density and caloric breakdown per serving.
@@ -73,7 +73,8 @@ const analyzeRecipeNutritionFlow = ai.defineFlow(
                           errorMsg.includes('high demand') || 
                           errorMsg.includes('unavailable') || 
                           errorMsg.includes('rate limit') ||
-                          errorMsg.includes('429');
+                          errorMsg.includes('429') ||
+                          errorMsg.includes('404');
         
         if (isRetryable && retries > 1) {
           retries--;
