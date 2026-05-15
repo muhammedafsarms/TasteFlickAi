@@ -1,4 +1,3 @@
-
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -91,23 +90,23 @@ export default {
         },
         'flick-right': {
           '0%': { transform: 'translateX(0) rotate(0)', opacity: '1' },
-          '100%': { transform: 'translateX(200px) rotate(15deg)', opacity: '0' },
+          '100%': { transform: 'translateX(300px) rotate(20deg)', opacity: '0' },
         },
         'flick-left': {
           '0%': { transform: 'translateX(0) rotate(0)', opacity: '1' },
-          '100%': { transform: 'translateX(-200px) rotate(-15deg)', opacity: '0' },
+          '100%': { transform: 'translateX(-300px) rotate(-20deg)', opacity: '0' },
         },
         'appear': {
-          '0%': { transform: 'scale(0.95)', opacity: '0' },
-          '100%': { transform: 'scale(1)', opacity: '1' },
+          '0%': { transform: 'scale(0.9) translateY(10px)', opacity: '0' },
+          '100%': { transform: 'scale(1) translateY(0)', opacity: '1' },
         }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'flick-right': 'flick-right 0.3s ease-in forwards',
-        'flick-left': 'flick-left 0.3s ease-in forwards',
-        'appear': 'appear 0.4s ease-out forwards',
+        'flick-right': 'flick-right 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards',
+        'flick-left': 'flick-left 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards',
+        'appear': 'appear 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards',
       },
     },
   },
