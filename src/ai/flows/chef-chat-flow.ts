@@ -31,7 +31,7 @@ export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
 
 const prompt = ai.definePrompt({
   name: 'chefChatPrompt',
-  model: 'googleai/gemini-1.5-flash-latest',
+  model: 'googleai/gemini-1.5-flash',
   input: {schema: ChefChatInputSchema},
   output: {schema: ChefChatOutputSchema},
   prompt: `You are the "TasteFlick Alchemist", a world-renowned gourmet chef and culinary scientist. 
