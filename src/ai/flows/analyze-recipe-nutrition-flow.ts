@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI agent that analyzes a given recipe to estimate its nutritional density and caloric breakdown.
@@ -9,6 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const AnalyzeRecipeNutritionInputSchema = z.object({
   recipeName: z.string().describe('The name of the recipe.'),
@@ -33,6 +35,7 @@ export async function analyzeRecipeNutrition(input: AnalyzeRecipeNutritionInput)
 
 const prompt = ai.definePrompt({
   name: 'analyzeRecipeNutritionPrompt',
+  model: googleAI.model('gemini-2.0-flash'),
   input: { schema: AnalyzeRecipeNutritionInputSchema },
   prompt: `You are an expert nutritionist. Analyze the provided recipe and estimate its nutritional breakdown per serving.
 
@@ -89,6 +92,6 @@ const analyzeRecipeNutritionFlow = ai.defineFlow(
         throw error;
       }
     }
-    throw lastError || new Error('Failed to analyze nutrition after retries');
+    throw lastError || new Error('Failed to analyze nutrition after retries. Please check your ingredients and try again.');
   }
 );

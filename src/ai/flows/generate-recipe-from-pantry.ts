@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for generating gourmet-style recipes based on available pantry ingredients and dietary preferences.
@@ -9,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const GenerateRecipeFromPantryInputSchema = z.object({
   ingredients: z
@@ -54,6 +56,7 @@ export async function generateRecipeFromPantry(
 
 const prompt = ai.definePrompt({
   name: 'generateRecipeFromPantryPrompt',
+  model: googleAI.model('gemini-2.0-flash'),
   input: {schema: GenerateRecipeFromPantryInputSchema},
   prompt: `You are a world-class gourmet chef with mastery in global fusion and Indian regional cuisines.
 
@@ -110,6 +113,6 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
         throw error;
       }
     }
-    throw lastError || new Error('Failed to generate recipe after retries');
+    throw lastError || new Error('Failed to generate recipe after retries. The kitchen is busy, please try again soon.');
   }
 );

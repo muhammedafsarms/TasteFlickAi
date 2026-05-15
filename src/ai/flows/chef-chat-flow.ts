@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for answering culinary doubts and providing expert cooking advice.
@@ -9,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const ChefChatInputSchema = z.object({
   message: z.string().describe('The user\'s question or doubt about cooking.'),
@@ -31,6 +33,7 @@ export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
 
 const prompt = ai.definePrompt({
   name: 'chefChatPrompt',
+  model: googleAI.model('gemini-2.0-flash'),
   input: {schema: ChefChatInputSchema},
   prompt: `You are the "TasteFlick Alchemist", a world-renowned gourmet chef.
 Answer any culinary question the user has.
@@ -85,6 +88,6 @@ const chefChatFlow = ai.defineFlow(
         throw error;
       }
     }
-    throw lastError || new Error('Failed to chat with chef after retries');
+    throw lastError || new Error('The Alchemist is currently in deep meditation. Please ask your question again in a moment.');
   }
 );
