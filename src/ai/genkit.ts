@@ -1,10 +1,10 @@
-
-import {genkit} from 'genkit';
+import { genkit } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 /**
- * @fileOverview Genkit initialization. 
- * Note: We are now using the Groq client directly within flows 
- * to handle specialized migration requirements.
+ * @fileOverview Genkit initialization.
+ * Configured with Google AI plugin for image generation capabilities.
  */
-
-export const ai = genkit({});
+export const ai = genkit({
+  plugins: [googleAI()],
+});

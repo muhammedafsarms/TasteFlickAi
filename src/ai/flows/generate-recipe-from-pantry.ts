@@ -1,16 +1,11 @@
-
 'use server';
 /**
- * @fileOverview Generates gourmet recipes from pantry ingredients using Groq Llama 3.
- *
- * - generateRecipeFromPantry - A function that handles recipe generation.
- * - GenerateRecipeFromPantryInput - The input type.
- * - GenerateRecipeFromPantryOutput - The return type.
+ * @fileOverview Generates highly detailed gourmet recipes from pantry ingredients using Groq Llama 3.
  */
 
-import {ai} from '../genkit';
-import {z} from 'genkit';
-import {groqClient, isGroqConfigured} from '../groq-client';
+import { ai } from '../genkit';
+import { z } from 'genkit';
+import { groqClient, isGroqConfigured } from '../groq-client';
 
 const GenerateRecipeFromPantryInputSchema = z.object({
   ingredients: z.array(z.string()),
@@ -21,8 +16,12 @@ export type GenerateRecipeFromPantryInput = z.infer<typeof GenerateRecipeFromPan
 const GenerateRecipeFromPantryOutputSchema = z.object({
   recipeName: z.string(),
   description: z.string(),
+  prepTime: z.string().describe('e.g., 15 mins'),
+  cookTime: z.string().describe('e.g., 30 mins'),
+  difficulty: z.enum(['Beginner', 'Intermediate', 'Advanced', 'Master']),
   instructions: z.array(z.string()),
   ingredientsList: z.array(z.string()),
+  platingSuggestions: z.string(),
   dietaryNotes: z.string(),
 });
 export type GenerateRecipeFromPantryOutput = z.infer<typeof GenerateRecipeFromPantryOutputSchema>;
@@ -53,25 +52,29 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
           messages: [
             {
               role: 'system',
-              content: 'You are a world-class gourmet chef. Create a unique recipe based on the provided ingredients. Output ONLY raw JSON.'
+              content: 'You are a world-class Michelin-star chef. Create an incredibly detailed, unique gourmet recipe based on the provided ingredients. Focus on technique and flavour profiles. Output ONLY raw JSON.'
             },
             {
               role: 'user',
               content: `Ingredients: ${input.ingredients.join(', ')}. 
               ${input.dietaryPreferences?.length ? `Preferences: ${input.dietaryPreferences.join(', ')}` : ''}
               
-              Return JSON:
+              Return JSON exactly in this format:
               {
-                "recipeName": "string",
-                "description": "string",
-                "instructions": ["string"],
-                "ingredientsList": ["string"],
-                "dietaryNotes": "string"
+                "recipeName": "Creative Name",
+                "description": "Eloquent description of the dish and its soul",
+                "prepTime": "XX mins",
+                "cookTime": "XX mins",
+                "difficulty": "Intermediate",
+                "instructions": ["Detailed step 1 with culinary techniques", "Step 2..."],
+                "ingredientsList": ["Quantity + Ingredient name", "..."],
+                "platingSuggestions": "Detailed advice on how to plate this like a pro",
+                "dietaryNotes": "Nutritional or dietary context"
               }`
             }
           ],
           temperature: 0.7,
-          max_tokens: 1024,
+          max_tokens: 1500,
           response_format: { type: 'json_object' }
         });
 
