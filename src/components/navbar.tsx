@@ -1,7 +1,6 @@
-
 "use client";
 
-import { Flame, BookOpen, ShoppingBasket, HandPlatter } from "lucide-react";
+import { Flame, BookOpen, ShoppingBasket, HandPlatter, MessageCircleQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -14,6 +13,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'flick', label: 'Flick', icon: Flame },
   { id: 'pantry', label: 'Pantry', icon: HandPlatter },
   { id: 'vault', label: 'Vault', icon: BookOpen },
+  { id: 'chat', label: 'Chat', icon: MessageCircleQuestion },
   { id: 'grocery', label: 'Grocery', icon: ShoppingBasket },
 ];
 

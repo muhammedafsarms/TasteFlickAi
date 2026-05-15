@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,6 +6,7 @@ import { FlavorFlick } from "@/components/flavor-flick";
 import { PantryBuilder } from "@/components/pantry-builder";
 import { TasteVault } from "@/components/taste-vault";
 import { GroceryGenerator } from "@/components/grocery-generator";
+import { ChefChat } from "@/components/chef-chat";
 import { Recipe } from "@/lib/types";
 import { generateRecipeFromPantry } from "@/ai/flows/generate-recipe-from-pantry";
 import { useToast } from "@/hooks/use-toast";
@@ -123,6 +123,10 @@ export default function TasteFlickApp() {
             recipes={savedRecipes} 
             onRemove={removeSavedRecipe} 
           />
+        )}
+
+        {activeTab === "chat" && (
+          <ChefChat />
         )}
 
         {activeTab === "grocery" && (
