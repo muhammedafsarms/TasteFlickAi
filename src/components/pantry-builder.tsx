@@ -1,48 +1,77 @@
-
 "use client";
 
 import { useState } from "react";
 import { Ingredient, COMMON_INGREDIENTS } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Trash2, Wand2, Check, Sparkles } from "lucide-react";
+import { Search, Plus, Trash2, Wand2, Check, Sparkles, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+
+const DIETARY_FILTERS = [
+  "Vegan", "Vegetarian", "Keto", "Gluten-Free", "Dairy-Free", "Low-Carb"
+];
 
 interface PantryBuilderProps {
   selectedIngredients: string[];
   onIngredientToggle: (name: string) => void;
-  onGenerate: () => void;
+  onGenerate: (dietary?: string[]) => void;
   isGenerating: boolean;
 }
 
 export function PantryBuilder({ selectedIngredients, onIngredientToggle, onGenerate, isGenerating }: PantryBuilderProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeDietary, setActiveDietary] = useState<string[]>([]);
+  
   const categories = Array.from(new Set(COMMON_INGREDIENTS.map(i => i.category)));
 
   const filteredIngredients = COMMON_INGREDIENTS.filter(i => 
     i.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const toggleDietary = (filter: string) => {
+    setActiveDietary(prev => 
+      prev.includes(filter) ? prev.filter(f => f !== filter) : [...prev, filter]
+    );
+  };
+
   return (
     <div className="flex flex-col h-full gap-6">
       <div className="flex flex-col gap-2">
         <h2 className="text-3xl font-headline font-bold text-primary">Smart Pantry Alchemist</h2>
         <p className="text-muted-foreground font-body leading-relaxed">
-          Select the items currently in your kitchen. Our Alchemist will transform them into gourmet creations.
+          Select the items in your kitchen and define your dietary focus.
         </p>
       </div>
 
-      <div className="relative group">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-        <Input 
-          placeholder="Search ingredients..." 
-          className="pl-10 h-12 rounded-full border-border bg-white shadow-sm focus-visible:ring-primary"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      <div className="space-y-4">
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Input 
+            placeholder="Search ingredients..." 
+            className="pl-10 h-12 rounded-full border-border bg-white shadow-sm focus-visible:ring-primary"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {DIETARY_FILTERS.map(filter => (
+            <Badge
+              key={filter}
+              variant={activeDietary.includes(filter) ? "default" : "outline"}
+              className={cn(
+                "cursor-pointer px-4 py-1.5 rounded-full transition-all border-primary/20",
+                activeDietary.includes(filter) ? "bg-primary text-white" : "hover:bg-primary/5 text-muted-foreground"
+              )}
+              onClick={() => toggleDietary(filter)}
+            >
+              {filter}
+            </Badge>
+          ))}
+        </div>
       </div>
 
       <ScrollArea className="flex-1 -mx-2 px-2">
@@ -53,7 +82,7 @@ export function PantryBuilder({ selectedIngredients, onIngredientToggle, onGener
 
             return (
               <div key={category} className="flex flex-col gap-4">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-secondary/60 ml-2">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-secondary/60 ml-2">
                   {category}
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -63,7 +92,7 @@ export function PantryBuilder({ selectedIngredients, onIngredientToggle, onGener
                       <Card 
                         key={ingredient.name}
                         className={cn(
-                          "cursor-pointer transition-all duration-300 border-2 select-none h-24 flex items-center justify-center p-2 text-center",
+                          "cursor-pointer transition-all duration-300 border-2 select-none h-24 flex items-center justify-center p-2 text-center rounded-3xl",
                           isSelected 
                             ? "border-primary bg-primary/5 shadow-md" 
                             : "border-transparent bg-white hover:border-primary/20 shadow-sm"
@@ -72,7 +101,7 @@ export function PantryBuilder({ selectedIngredients, onIngredientToggle, onGener
                       >
                         <CardContent className="p-0 flex flex-col items-center gap-2">
                           <span className={cn(
-                            "font-headline text-lg leading-tight",
+                            "font-headline text-base leading-tight px-2",
                             isSelected ? "text-primary font-bold" : "text-foreground"
                           )}>
                             {ingredient.name}
@@ -92,7 +121,7 @@ export function PantryBuilder({ selectedIngredients, onIngredientToggle, onGener
       <div className="fixed bottom-24 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent md:relative md:bottom-auto md:bg-none md:p-0">
         <Button 
           className="w-full h-16 rounded-full text-lg font-headline shadow-xl hover:shadow-2xl transition-all gap-3 bg-primary group overflow-hidden relative"
-          onClick={onGenerate}
+          onClick={() => onGenerate(activeDietary)}
           disabled={selectedIngredients.length === 0 || isGenerating}
         >
           {isGenerating ? (
@@ -105,9 +134,6 @@ export function PantryBuilder({ selectedIngredients, onIngredientToggle, onGener
               <Wand2 className="h-6 w-6 group-hover:rotate-12 transition-transform" />
               Alchemy Start ({selectedIngredients.length} Items)
             </>
-          )}
-          {isGenerating && (
-            <div className="absolute inset-0 bg-white/10 animate-pulse" />
           )}
         </Button>
       </div>

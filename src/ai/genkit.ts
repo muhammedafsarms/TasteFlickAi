@@ -1,10 +1,11 @@
 
 import { genkit } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 /**
  * @fileOverview Genkit initialization.
- * Simplified to remove Google AI plugin as image generation is no longer required.
  */
 export const ai = genkit({
-  plugins: [],
+  plugins: [googleAI()],
+  model: 'googleai/gemini-2.0-flash-exp', // Fast and reliable for gourmet JSON
 });

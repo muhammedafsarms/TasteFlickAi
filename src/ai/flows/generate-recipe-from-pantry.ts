@@ -1,11 +1,10 @@
 'use server';
 /**
- * @fileOverview Generates highly detailed gourmet recipes from pantry ingredients using Groq Llama 3.
+ * @fileOverview Generates highly detailed gourmet recipes from pantry ingredients using Genkit Prompts.
  */
 
 import { ai } from '../genkit';
 import { z } from 'genkit';
-import { groqClient, isGroqConfigured } from '../groq-client';
 
 const GenerateRecipeFromPantryInputSchema = z.object({
   ingredients: z.array(z.string()),
@@ -26,7 +25,26 @@ const GenerateRecipeFromPantryOutputSchema = z.object({
 });
 export type GenerateRecipeFromPantryOutput = z.infer<typeof GenerateRecipeFromPantryOutputSchema>;
 
-const RETRY_DELAY = [2000, 5000];
+const recipePrompt = ai.definePrompt({
+  name: 'generateRecipeFromPantryPrompt',
+  input: { schema: GenerateRecipeFromPantryInputSchema },
+  output: { schema: GenerateRecipeFromPantryOutputSchema },
+  prompt: `You are a world-class Michelin-star chef and culinary alchemist. 
+  
+Create an incredibly detailed, unique gourmet recipe based on the provided ingredients. 
+Focus on technique and complex flavour profiles.
+
+{{#if dietaryPreferences}}
+STRICT DIETARY CONSTRAINTS: {{{dietaryPreferences}}}
+{{/if}}
+
+Ingredients available:
+{{#each ingredients}}
+- {{{this}}}
+{{/each}}
+
+For the recipe name, create a descriptive, evocative, and technically accurate gourmet name that is EXACTLY one, two, or three words long.`,
+});
 
 export async function generateRecipeFromPantry(input: GenerateRecipeFromPantryInput): Promise<GenerateRecipeFromPantryOutput> {
   return generateRecipeFromPantryFlow(input);
@@ -39,60 +57,13 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
     outputSchema: GenerateRecipeFromPantryOutputSchema,
   },
   async (input) => {
-    console.log("Alchemist: Manifesting recipe for ingredients:", input.ingredients.join(", "));
-    
-    if (!isGroqConfigured()) {
-      throw new Error("Groq API key is not configured. Please set GROQ_API_KEY in your environment.");
+    try {
+      const { output } = await recipePrompt(input);
+      if (!output) throw new Error('The Alchemist failed to manifest a vision.');
+      return output;
+    } catch (error: any) {
+      console.error("Alchemy Error:", error);
+      throw new Error(`Failed to manifest recipe: ${error.message}`);
     }
-
-    let attempt = 0;
-    
-    while (attempt <= RETRY_DELAY.length) {
-      try {
-        const completion = await groqClient.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a world-class Michelin-star chef. Create an incredibly detailed, unique gourmet recipe based on the provided ingredients. Focus on technique and flavour profiles. For the recipe name, create a descriptive, evocative, and technically accurate gourmet name that is EXACTLY one, two, or three words long. Output ONLY valid JSON.'
-            },
-            {
-              role: 'user',
-              content: `Ingredients: ${input.ingredients.join(', ')}. 
-              ${input.dietaryPreferences?.length ? `Preferences: ${input.dietaryPreferences.join(', ')}` : ''}
-              
-              Return JSON exactly in this format:
-              {
-                "recipeName": "Conise 1-3 word gourmet name",
-                "description": "Eloquent description",
-                "prepTime": "XX mins",
-                "cookTime": "XX mins",
-                "difficulty": "Intermediate",
-                "instructions": ["Step 1", "Step 2..."],
-                "ingredientsList": ["Quantity + Ingredient name", "..."],
-                "platingSuggestions": "Advice",
-                "dietaryNotes": "Context"
-              }`
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 2048,
-          response_format: { type: 'json_object' }
-        });
-
-        const content = completion.choices[0]?.message?.content;
-        if (!content) throw new Error('Alchemist received an empty vision.');
-        
-        return GenerateRecipeFromPantryOutputSchema.parse(JSON.parse(content));
-      } catch (error: any) {
-        if (error.status === 429 && attempt < RETRY_DELAY.length) {
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
-          attempt++;
-          continue;
-        }
-        throw new Error(`Failed to manifest recipe: ${error.message}`);
-      }
-    }
-    throw new Error("Service busy.");
   }
 );

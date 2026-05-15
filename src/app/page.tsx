@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -44,13 +43,14 @@ export default function TasteFlickApp() {
     );
   };
 
-  const handleGenerateRecipe = useCallback(async () => {
+  const handleGenerateRecipe = useCallback(async (dietary?: string[]) => {
     if (selectedIngredients.length === 0 || isGenerating) return;
     
     setIsGenerating(true);
     try {
       const newRecipe = await generateRecipeFromPantry({
-        ingredients: selectedIngredients
+        ingredients: selectedIngredients,
+        dietaryPreferences: dietary
       });
       
       const recipeWithId: Recipe = {
@@ -73,7 +73,6 @@ export default function TasteFlickApp() {
 
   const saveRecipe = (recipe: Recipe) => {
     setSavedRecipes(prev => {
-      // Prevent duplicates
       if (prev.some(r => r.recipeName === recipe.recipeName)) return prev;
       return [{ ...recipe, savedAt: Date.now() }, ...prev];
     });
@@ -142,7 +141,7 @@ export default function TasteFlickApp() {
       
       {isGenerating && (
         <div className="fixed inset-0 z-[100] bg-background/60 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4 text-center">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4 text-center border border-primary/10">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
             <h2 className="text-2xl font-headline font-bold">The Alchemist is Cooking...</h2>
             <p className="text-muted-foreground font-body max-w-[200px]">Blending ingredients and crafting your gourmet masterpiece.</p>
