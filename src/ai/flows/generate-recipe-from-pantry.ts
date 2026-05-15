@@ -1,10 +1,16 @@
+
 'use server';
 /**
- * @fileOverview Generates gourmet recipes from pantry ingredients with robust retry logic.
+ * @fileOverview Generates gourmet recipes from pantry ingredients using Groq Llama 3.
+ *
+ * - generateRecipeFromPantry - A function that handles recipe generation.
+ * - GenerateRecipeFromPantryInput - The input type.
+ * - GenerateRecipeFromPantryOutput - The return type.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {groqClient} from '@/ai/groq-client';
 
 const GenerateRecipeFromPantryInputSchema = z.object({
   ingredients: z.array(z.string()),
@@ -24,42 +30,61 @@ export type GenerateRecipeFromPantryOutput = z.infer<typeof GenerateRecipeFromPa
 const RETRY_DELAY = [2000, 5000, 10000];
 
 export async function generateRecipeFromPantry(input: GenerateRecipeFromPantryInput): Promise<GenerateRecipeFromPantryOutput> {
-  let attempt = 0;
-  
-  while (attempt <= RETRY_DELAY.length) {
-    try {
-      const { text } = await ai.generate({
-        model: 'googleai/gemini-2.0-flash',
-        config: {
-          temperature: 0.7,
-          maxOutputTokens: 512,
-        },
-        prompt: `Chef, create a unique gourmet recipe.
-        Ingredients: ${input.ingredients.join(', ')}
-        ${input.dietaryPreferences?.length ? `Preferences: ${input.dietaryPreferences.join(', ')}` : ''}
-        
-        Output raw JSON:
-        {
-          "recipeName": "Title",
-          "description": "Short intro",
-          "instructions": ["Step 1", "Step 2"],
-          "ingredientsList": ["Qty Item"],
-          "dietaryNotes": "Info"
-        }`
-      });
-
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('Invalid response format');
-      return GenerateRecipeFromPantryOutputSchema.parse(JSON.parse(jsonMatch[0]));
-    } catch (error: any) {
-      const isQuotaError = error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED');
-      if (isQuotaError && attempt < RETRY_DELAY.length) {
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
-        attempt++;
-        continue;
-      }
-      throw new Error(isQuotaError ? "The Alchemist is busy. Please try again in a moment." : "Alchemy failed. Check your ingredients.");
-    }
-  }
-  throw new Error("The kitchen is currently over capacity. Please wait a minute.");
+  return generateRecipeFromPantryFlow(input);
 }
+
+const generateRecipeFromPantryFlow = ai.defineFlow(
+  {
+    name: 'generateRecipeFromPantryFlow',
+    inputSchema: GenerateRecipeFromPantryInputSchema,
+    outputSchema: GenerateRecipeFromPantryOutputSchema,
+  },
+  async (input) => {
+    let attempt = 0;
+    
+    while (attempt <= RETRY_DELAY.length) {
+      try {
+        const completion = await groqClient.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a world-class gourmet chef. Create a unique recipe based on the provided ingredients. Output ONLY raw JSON.'
+            },
+            {
+              role: 'user',
+              content: `Ingredients: ${input.ingredients.join(', ')}. 
+              ${input.dietaryPreferences?.length ? `Preferences: ${input.dietaryPreferences.join(', ')}` : ''}
+              
+              Return JSON:
+              {
+                "recipeName": "string",
+                "description": "string",
+                "instructions": ["string"],
+                "ingredientsList": ["string"],
+                "dietaryNotes": "string"
+              }`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 1024,
+          response_format: { type: 'json_object' }
+        });
+
+        const content = completion.choices[0]?.message?.content;
+        if (!content) throw new Error('No content returned from Groq');
+        
+        return GenerateRecipeFromPantryOutputSchema.parse(JSON.parse(content));
+      } catch (error: any) {
+        const isQuotaError = error.status === 429;
+        if (isQuotaError && attempt < RETRY_DELAY.length) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
+          attempt++;
+          continue;
+        }
+        throw new Error(isQuotaError ? "The kitchen is currently busy. Please try again soon." : "Failed to manifest recipe. Please check your ingredients.");
+      }
+    }
+    throw new Error("Service busy.");
+  }
+);

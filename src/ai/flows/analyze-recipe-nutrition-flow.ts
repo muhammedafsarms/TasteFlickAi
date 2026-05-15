@@ -1,10 +1,12 @@
+
 'use server';
 /**
- * @fileOverview Analyzes recipe nutrition with robust error handling.
+ * @fileOverview Analyzes recipe nutrition using Groq Llama 3.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {groqClient} from '@/ai/groq-client';
 
 const AnalyzeRecipeNutritionInputSchema = z.object({
   recipeName: z.string(),
@@ -26,42 +28,61 @@ export type AnalyzeRecipeNutritionOutput = z.infer<typeof AnalyzeRecipeNutrition
 const RETRY_DELAY = [2000, 5000, 10000];
 
 export async function analyzeRecipeNutrition(input: AnalyzeRecipeNutritionInput): Promise<AnalyzeRecipeNutritionOutput> {
-  let attempt = 0;
-
-  while (attempt <= RETRY_DELAY.length) {
-    try {
-      const { text } = await ai.generate({
-        model: 'googleai/gemini-2.0-flash',
-        config: {
-          temperature: 0.3,
-          maxOutputTokens: 256,
-        },
-        prompt: `Analyze nutrition for: ${input.recipeName}.
-        Ingredients: ${input.ingredients.join(', ')}
-        
-        Output raw JSON:
-        {
-          "calories": number,
-          "proteinGrams": number,
-          "fatGrams": number,
-          "carbohydratesGrams": number,
-          "nutritionalDensityDescription": "summary",
-          "notes": "extra"
-        }`
-      });
-
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('Invalid format');
-      return AnalyzeRecipeNutritionOutputSchema.parse(JSON.parse(jsonMatch[0]));
-    } catch (error: any) {
-      const isQuotaError = error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED');
-      if (isQuotaError && attempt < RETRY_DELAY.length) {
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
-        attempt++;
-        continue;
-      }
-      throw new Error("Nutrition analysis unavailable right now.");
-    }
-  }
-  throw new Error("Service busy.");
+  return analyzeRecipeNutritionFlow(input);
 }
+
+const analyzeRecipeNutritionFlow = ai.defineFlow(
+  {
+    name: 'analyzeRecipeNutritionFlow',
+    inputSchema: AnalyzeRecipeNutritionInputSchema,
+    outputSchema: AnalyzeRecipeNutritionOutputSchema,
+  },
+  async (input) => {
+    let attempt = 0;
+
+    while (attempt <= RETRY_DELAY.length) {
+      try {
+        const completion = await groqClient.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a nutrition expert. Analyze the provided recipe and provide nutritional data. Output ONLY raw JSON.'
+            },
+            {
+              role: 'user',
+              content: `Recipe: ${input.recipeName}. Ingredients: ${input.ingredients.join(', ')}. 
+              
+              Return JSON:
+              {
+                "calories": number,
+                "proteinGrams": number,
+                "fatGrams": number,
+                "carbohydratesGrams": number,
+                "nutritionalDensityDescription": "string",
+                "notes": "string"
+              }`
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 512,
+          response_format: { type: 'json_object' }
+        });
+
+        const content = completion.choices[0]?.message?.content;
+        if (!content) throw new Error('No content returned from Groq');
+        
+        return AnalyzeRecipeNutritionOutputSchema.parse(JSON.parse(content));
+      } catch (error: any) {
+        const isQuotaError = error.status === 429;
+        if (isQuotaError && attempt < RETRY_DELAY.length) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
+          attempt++;
+          continue;
+        }
+        throw new Error("Nutrition analysis temporarily unavailable.");
+      }
+    }
+    throw new Error("Service busy.");
+  }
+);
