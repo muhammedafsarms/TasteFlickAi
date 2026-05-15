@@ -138,7 +138,7 @@ export function FlavorFlick({ suggestions, onSave, onDismiss }: FlavorFlickProps
         </Card>
 
         {showDetails && (
-          <div className="absolute inset-0 z-20 bg-background/98 backdrop-blur-xl p-8 overflow-y-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
+          <div className="absolute inset-0 z-20 bg-white p-8 overflow-y-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-3xl font-headline text-primary font-bold">Culinary Secrets</h3>
               <Button 
