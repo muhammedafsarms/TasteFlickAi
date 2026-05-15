@@ -46,8 +46,6 @@ const chefChatFlow = ai.defineFlow(
     outputSchema: ChefChatOutputSchema,
   },
   async (input) => {
-    console.log("Chef's Table: Manifesting response for:", input.message);
-    
     if (!isGroqConfigured()) {
       return { 
         answer: "The chef's kitchen is missing its secret key. Please configure GROQ_API_KEY to begin our culinary dialogue.", 
@@ -69,18 +67,17 @@ const chefChatFlow = ai.defineFlow(
           messages: [
             {
               role: 'system',
-              content: `You are a world-class Michelin-star chef with a vocabulary as refined as your palate. 
+              content: `You are a world-class Michelin-star chef. 
               
-              - If the user asks for a recipe, provide a highly detailed, gourmet manifestation. The "recipe" object MUST be complete with specific measurements, complex techniques, and exquisite plating advice.
-              - If the user asks for advice, provide eloquent, helpful culinary wisdom.
-              - For any "recipeName", create a descriptive, evocative, and technically accurate gourmet name that reflects the dish's soul.
+              - If the user asks for a recipe, provide a highly detailed gourmet manifestation. 
+              - If the user asks for advice, provide eloquent culinary wisdom.
+              - For any "recipeName", create a descriptive, evocative, and technically accurate gourmet name that is EXACTLY one, two, or three words long.
               
               STRICT FORMATTING:
-              You MUST respond in a valid JSON object format with these fields:
-              - "answer": (string) Your conversational response, narrative, or advice.
-              - "suggestions": (array of strings) 2-3 follow-up questions or related topics.
-              - "recipe": (optional object) Include this ONLY if a recipe is requested or appropriate. 
-                Fields: recipeName, description (eloquent), prepTime (e.g. 20 mins), cookTime, difficulty (Beginner/Intermediate/Advanced/Master), instructions (detailed array of steps), ingredientsList (array of quantity+item), platingSuggestions (pro advice), dietaryNotes (contextual insight).`
+              You MUST respond in a valid JSON object format:
+              - "answer": (string) Your conversational response.
+              - "suggestions": (array of strings) 2-3 follow-up topics.
+              - "recipe": (optional object) Only if appropriate. Fields: recipeName (1-3 words), description, prepTime, cookTime, difficulty, instructions, ingredientsList, platingSuggestions, dietaryNotes.`
             },
             ...historyMessages as any,
             {
@@ -96,21 +93,14 @@ const chefChatFlow = ai.defineFlow(
         const content = completion.choices[0]?.message?.content;
         if (!content) throw new Error('Chef received an empty plate.');
         
-        try {
-          const data = JSON.parse(content);
-          return {
-            answer: data.answer || "I'm sorry, I couldn't process that culinary request.",
-            suggestions: data.suggestions || [],
-            recipe: data.recipe || undefined
-          };
-        } catch (parseError) {
-          console.error("Chef's Table: JSON Parsing failed:", parseError);
-          throw new Error('The chef spoke in riddles (invalid JSON response).');
-        }
+        const data = JSON.parse(content);
+        return {
+          answer: data.answer || "I'm sorry, I couldn't process that culinary request.",
+          suggestions: data.suggestions || [],
+          recipe: data.recipe || undefined
+        };
 
       } catch (error: any) {
-        console.error(`Chef's Table Error (Attempt ${attempt + 1}):`, error.message);
-        
         if (error.status === 429 && attempt < RETRY_DELAY.length) {
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
           attempt++;

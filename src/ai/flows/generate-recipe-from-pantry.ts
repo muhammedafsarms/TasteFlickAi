@@ -49,13 +49,12 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
     
     while (attempt <= RETRY_DELAY.length) {
       try {
-        console.log(`Alchemist: Requesting completion (Attempt ${attempt + 1})...`);
         const completion = await groqClient.chat.completions.create({
           model: 'llama-3.3-70b-versatile',
           messages: [
             {
               role: 'system',
-              content: 'You are a world-class Michelin-star chef. Create an incredibly detailed, unique gourmet recipe based on the provided ingredients. Focus on technique and flavour profiles. For the recipe name, create a descriptive, evocative, and technically accurate gourmet name. Output ONLY valid JSON.'
+              content: 'You are a world-class Michelin-star chef. Create an incredibly detailed, unique gourmet recipe based on the provided ingredients. Focus on technique and flavour profiles. For the recipe name, create a descriptive, evocative, and technically accurate gourmet name that is EXACTLY one, two, or three words long. Output ONLY valid JSON.'
             },
             {
               role: 'user',
@@ -64,7 +63,7 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
               
               Return JSON exactly in this format:
               {
-                "recipeName": "A descriptive, evocative, and technically accurate gourmet name",
+                "recipeName": "Conise 1-3 word gourmet name",
                 "description": "Eloquent description",
                 "prepTime": "XX mins",
                 "cookTime": "XX mins",
@@ -82,31 +81,16 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
         });
 
         const content = completion.choices[0]?.message?.content;
-        console.log("Alchemist: Raw response received:", content?.substring(0, 100) + "...");
-
-        if (!content) {
-          throw new Error('Alchemist received an empty vision.');
-        }
+        if (!content) throw new Error('Alchemist received an empty vision.');
         
-        try {
-          const parsed = JSON.parse(content);
-          return GenerateRecipeFromPantryOutputSchema.parse(parsed);
-        } catch (parseError) {
-          console.error("Alchemist: JSON parsing/validation failed:", parseError);
-          throw new Error("The Alchemist's recipe was illegible.");
-        }
-        
+        return GenerateRecipeFromPantryOutputSchema.parse(JSON.parse(content));
       } catch (error: any) {
-        console.error(`Alchemist Error (Attempt ${attempt + 1}):`, error.message || error);
-        
-        const isQuotaError = error.status === 429;
-        if (isQuotaError && attempt < RETRY_DELAY.length) {
-          console.warn(`Alchemist: Rate limited. Retrying in ${RETRY_DELAY[attempt]}ms...`);
+        if (error.status === 429 && attempt < RETRY_DELAY.length) {
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY[attempt]));
           attempt++;
           continue;
         }
-        throw new Error(isQuotaError ? "The kitchen is currently busy. Please try again soon." : `Failed to manifest recipe: ${error.message}`);
+        throw new Error(`Failed to manifest recipe: ${error.message}`);
       }
     }
     throw new Error("Service busy.");
