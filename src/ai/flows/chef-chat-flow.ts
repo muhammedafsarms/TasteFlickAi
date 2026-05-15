@@ -10,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
+import {googleAI} from '@genkit-ai/google-genai';
 
 const ChefChatInputSchema = z.object({
   message: z.string().describe('The user\'s question or doubt about cooking.'),
@@ -31,29 +31,6 @@ export async function chefChat(input: ChefChatInput): Promise<ChefChatOutput> {
   return chefChatFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'chefChatPrompt',
-  model: 'googleai/gemini-2.0-flash',
-  input: {schema: ChefChatInputSchema},
-  prompt: `You are the "TasteFlick Alchemist", a world-renowned gourmet chef.
-Answer any culinary question the user has.
-
-User's Question: {{{message}}}
-
-{{#if history}}
-Previous context:
-{{#each history}}
-- {{role}}: {{content}}
-{{/each}}
-{{/if}}
-
-Return ONLY a raw JSON object with the following structure. Do not include markdown formatting:
-{
-  "answer": "...",
-  "suggestions": ["...", "..."]
-}`,
-});
-
 const chefChatFlow = ai.defineFlow(
   {
     name: 'chefChatFlow',
@@ -66,9 +43,22 @@ const chefChatFlow = ai.defineFlow(
 
     while (retries > 0) {
       try {
-        const response = await prompt(input);
-        const text = response.text;
+        const historyText = input.history?.map(h => `${h.role}: ${h.content}`).join('\n') || '';
         
+        const { text } = await ai.generate({
+          model: 'googleai/gemini-2.0-flash',
+          prompt: `You are the "TasteFlick Alchemist", a world-renowned gourmet chef. Answer any culinary question.
+          
+          User's Question: ${input.message}
+          ${historyText ? `\nPrevious context:\n${historyText}` : ''}
+
+          Return ONLY a raw JSON object (no markdown) with this structure:
+          {
+            "answer": "string",
+            "suggestions": ["string"]
+          }`,
+        });
+
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error('No JSON found in response');
         
@@ -78,11 +68,7 @@ const chefChatFlow = ai.defineFlow(
       } catch (error: any) {
         lastError = error;
         const errorMsg = error.message?.toLowerCase() || '';
-        const isRetryable = errorMsg.includes('503') || 
-                          errorMsg.includes('high demand') || 
-                          errorMsg.includes('unavailable') || 
-                          errorMsg.includes('rate limit') ||
-                          errorMsg.includes('429');
+        const isRetryable = errorMsg.includes('503') || errorMsg.includes('429');
         
         if (isRetryable && retries > 1) {
           retries--;
@@ -92,6 +78,6 @@ const chefChatFlow = ai.defineFlow(
         throw error;
       }
     }
-    throw lastError || new Error('The Alchemist is currently in deep meditation. Please ask your question again in a moment.');
+    throw lastError || new Error('The Alchemist is unavailable. Please try again later.');
   }
 );

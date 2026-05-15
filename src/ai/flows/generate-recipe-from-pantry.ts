@@ -54,28 +54,6 @@ export async function generateRecipeFromPantry(
   return generateRecipeFromPantryFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'generateRecipeFromPantryPrompt',
-  model: 'googleai/gemini-2.0-flash',
-  input: {schema: GenerateRecipeFromPantryInputSchema},
-  prompt: `You are a world-class gourmet chef with mastery in global fusion and Indian regional cuisines.
-
-Your task is to craft a unique, gourmet-style recipe using the ingredients provided.
-
-Ingredients available: {{#each ingredients}}- {{{this}}}{{/each}}
-
-{{#if dietaryPreferences}}Dietary preferences: {{#each dietaryPreferences}}- {{{this}}}{{/each}}{{/if}}
-
-Return ONLY a raw JSON object with the following structure. Do not include markdown formatting or extra text:
-{
-  "recipeName": "...",
-  "description": "...",
-  "instructions": ["step 1", "step 2", ...],
-  "ingredientsList": ["quantity item", ...],
-  "dietaryNotes": "..."
-}`,
-});
-
 const generateRecipeFromPantryFlow = ai.defineFlow(
   {
     name: 'generateRecipeFromPantryFlow',
@@ -88,16 +66,28 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
 
     while (retries > 0) {
       try {
-        const response = await prompt(input);
-        const text = response.text;
-        
-        // Robust JSON extraction
+        const { text } = await ai.generate({
+          model: 'googleai/gemini-2.0-flash',
+          prompt: `You are a world-class gourmet chef. Craft a unique, gourmet-style recipe using the following ingredients.
+          
+          Ingredients available: ${input.ingredients.join(', ')}
+          ${input.dietaryPreferences ? `Dietary preferences: ${input.dietaryPreferences.join(', ')}` : ''}
+
+          Return ONLY a raw JSON object (no markdown, no extra text) with the following structure:
+          {
+            "recipeName": "string",
+            "description": "string",
+            "instructions": ["string"],
+            "ingredientsList": ["string"],
+            "dietaryNotes": "string"
+          }`,
+        });
+
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error('No JSON found in response');
         
         const jsonString = jsonMatch[0];
         const parsed = JSON.parse(jsonString);
-        
         return GenerateRecipeFromPantryOutputSchema.parse(parsed);
       } catch (error: any) {
         lastError = error;
@@ -116,6 +106,6 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
         throw error;
       }
     }
-    throw lastError || new Error('Failed to generate recipe after retries. The kitchen is busy, please try again soon.');
+    throw lastError || new Error('The kitchen is busy, please try again soon.');
   }
 );
