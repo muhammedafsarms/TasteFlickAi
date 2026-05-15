@@ -9,6 +9,7 @@ import { GroceryGenerator } from "@/components/grocery-generator";
 import { ChefChat } from "@/components/chef-chat";
 import { Recipe } from "@/lib/types";
 import { generateRecipeFromPantry } from "@/ai/flows/generate-recipe-from-pantry";
+import { generateRecipeImage } from "@/ai/flows/generate-recipe-image-flow";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Loader2 } from "lucide-react";
 
@@ -50,14 +51,21 @@ export default function TasteFlickApp() {
     
     setIsGenerating(true);
     try {
+      // 1. Generate the recipe text
       const newRecipe = await generateRecipeFromPantry({
         ingredients: selectedIngredients
       });
       
+      // 2. Generate a custom gourmet image for the recipe
+      const { imageUrl } = await generateRecipeImage({
+        recipeName: newRecipe.recipeName,
+        description: newRecipe.description
+      });
+
       const recipeWithId: Recipe = {
         ...newRecipe,
         id: Math.random().toString(36).substr(2, 9),
-        imageUrl: `https://picsum.photos/seed/${Math.floor(Math.random() * 1000)}/600/800`,
+        imageUrl: imageUrl,
       };
 
       setSuggestions(prev => [recipeWithId, ...prev]);
@@ -144,7 +152,7 @@ export default function TasteFlickApp() {
           <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4 text-center">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
             <h2 className="text-2xl font-headline font-bold">The Alchemist is Cooking...</h2>
-            <p className="text-muted-foreground font-body max-w-[200px]">Blending your ingredients into gourmet perfection.</p>
+            <p className="text-muted-foreground font-body max-w-[200px]">Blending ingredients and developing the perfect visual for your dish.</p>
           </div>
         </div>
       )}
