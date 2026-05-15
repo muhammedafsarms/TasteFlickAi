@@ -121,6 +121,8 @@ export const COMMON_INGREDIENTS: Ingredient[] = [
   { name: 'Portobello', category: 'Vegetables' },
 
   // Spicy Vegetables (Chilies)
+  { name: 'Green Chilli', category: 'Vegetables' },
+  { name: 'Red Chilli', category: 'Vegetables' },
   { name: 'Jalapeño Pepper', category: 'Vegetables' },
   { name: 'Habanero Pepper', category: 'Vegetables' },
   { name: 'Serrano Pepper', category: 'Vegetables' },
