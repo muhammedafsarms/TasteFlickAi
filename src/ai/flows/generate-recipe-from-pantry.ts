@@ -84,7 +84,9 @@ const generateRecipeFromPantryFlow = ai.defineFlow(
         return output;
       } catch (error: any) {
         lastError = error;
-        const isRetryable = error.message?.includes('503') || error.message?.includes('high demand') || error.message?.includes('Service Unavailable');
+        // Check for retryable errors (503, rate limits, etc.)
+        const errorMsg = error.message?.toLowerCase() || '';
+        const isRetryable = errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('unavailable') || errorMsg.includes('rate limit');
         
         if (isRetryable && retries > 1) {
           retries--;

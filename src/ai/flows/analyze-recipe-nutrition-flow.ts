@@ -57,7 +57,27 @@ const analyzeRecipeNutritionFlow = ai.defineFlow(
     outputSchema: AnalyzeRecipeNutritionOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    let retries = 3;
+    let lastError: any;
+
+    while (retries > 0) {
+      try {
+        const { output } = await prompt(input);
+        if (!output) throw new Error('No output from prompt');
+        return output;
+      } catch (error: any) {
+        lastError = error;
+        const errorMsg = error.message?.toLowerCase() || '';
+        const isRetryable = errorMsg.includes('503') || errorMsg.includes('high demand') || errorMsg.includes('unavailable') || errorMsg.includes('rate limit');
+        
+        if (isRetryable && retries > 1) {
+          retries--;
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError || new Error('Failed to analyze nutrition after retries');
   }
 );
