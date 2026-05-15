@@ -70,15 +70,17 @@ const chefChatFlow = ai.defineFlow(
           messages: [
             {
               role: 'system',
-              content: `You are a world-class Michelin-star chef. 
-              If the user asks for a recipe, provide a detailed, unique gourmet manifestation. 
-              If the user asks for advice, provide eloquent and helpful culinary wisdom.
+              content: `You are a world-class Michelin-star chef with a vocabulary as refined as your palate. 
               
+              - If the user asks for a recipe, provide a highly detailed, gourmet manifestation. The "recipe" object MUST be complete with specific measurements, complex techniques, and exquisite plating advice.
+              - If the user asks for advice, provide eloquent, helpful culinary wisdom.
+              
+              STRICT FORMATTING:
               You MUST respond in a valid JSON object format with these fields:
-              - "answer": (string) Your conversational response or the recipe narrative.
+              - "answer": (string) Your conversational response, narrative, or advice.
               - "suggestions": (array of strings) 2-3 follow-up questions or related topics.
-              - "recipe": (optional object) Only include this if a recipe is requested. 
-                Fields: recipeName, description, prepTime, cookTime, difficulty (Beginner/Intermediate/Advanced/Master), instructions (array), ingredientsList (array of quantity+item), platingSuggestions, dietaryNotes.`
+              - "recipe": (optional object) Include this ONLY if a recipe is requested or appropriate. 
+                Fields: recipeName, description (eloquent), prepTime (e.g. 20 mins), cookTime, difficulty (Beginner/Intermediate/Advanced/Master), instructions (detailed array of steps), ingredientsList (array of quantity+item), platingSuggestions (pro advice), dietaryNotes (contextual insight).`
             },
             ...historyMessages as any,
             {
@@ -87,7 +89,7 @@ const chefChatFlow = ai.defineFlow(
             }
           ],
           temperature: 0.7,
-          max_tokens: 2048,
+          max_tokens: 3000,
           response_format: { type: 'json_object' }
         });
 
@@ -124,3 +126,4 @@ const chefChatFlow = ai.defineFlow(
     return { answer: "The kitchen is currently closed for cleaning. Please try again later.", suggestions: [] };
   }
 );
+

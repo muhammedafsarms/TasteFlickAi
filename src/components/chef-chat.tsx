@@ -6,7 +6,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, User, Bot, Loader2, MessageSquare, BookMarked, ChefHat, Clock } from "lucide-react";
+import { 
+  Send, 
+  User, 
+  Bot, 
+  Loader2, 
+  MessageSquare, 
+  BookMarked, 
+  ChefHat, 
+  Clock, 
+  ChevronDown, 
+  ChevronUp,
+  Star,
+  Utensils
+} from "lucide-react";
 import { chefChat } from "@/ai/flows/chef-chat-flow";
 import { cn } from "@/lib/utils";
 import { Recipe } from "@/lib/types";
@@ -25,6 +38,7 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [expandedRecipeIdx, setExpandedRecipeIdx] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,6 +95,10 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
     onSaveRecipe(recipe);
   };
 
+  const toggleExpand = (idx: number) => {
+    setExpandedRecipeIdx(expandedRecipeIdx === idx ? null : idx);
+  };
+
   return (
     <div className="flex flex-col h-[75vh] gap-6">
       <div className="flex flex-col gap-2">
@@ -102,7 +120,7 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
               <div className="space-y-6">
                 {messages.map((m, i) => (
                   <div key={i} className={cn(
-                    "flex gap-4 max-w-[90%]",
+                    "flex gap-4 max-w-[95%] md:max-w-[90%]",
                     m.role === 'user' ? "ml-auto flex-row-reverse" : "mr-auto"
                   )}>
                     <div className={cn(
@@ -111,7 +129,7 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
                     )}>
                       {m.role === 'user' ? <User className="h-5 w-5" /> : <ChefHat className="h-5 w-5" />}
                     </div>
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3 flex-1 min-w-0">
                       <div className={cn(
                         "p-4 rounded-2xl text-sm leading-relaxed font-body shadow-sm whitespace-pre-wrap",
                         m.role === 'user' 
@@ -122,30 +140,83 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
                       </div>
 
                       {m.recipe && (
-                        <Card className="border border-primary/20 bg-primary/5 rounded-2xl overflow-hidden shadow-sm">
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-3">
-                              <div>
-                                <h4 className="font-headline font-bold text-lg text-primary">{m.recipe.recipeName}</h4>
-                                <div className="flex gap-3 mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        <Card className="border border-primary/20 bg-primary/5 rounded-2xl overflow-hidden shadow-sm transition-all duration-300">
+                          <CardContent className="p-4 space-y-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h4 className="font-headline font-bold text-lg text-primary leading-tight">{m.recipe.recipeName}</h4>
+                                <div className="flex flex-wrap gap-3 mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                   <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {m.recipe.prepTime}</span>
                                   <span>•</span>
-                                  <span>{m.recipe.difficulty}</span>
+                                  <span className="flex items-center gap-1"><Utensils className="h-3 w-3" /> {m.recipe.difficulty}</span>
                                 </div>
                               </div>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="rounded-full border-primary/30 text-primary hover:bg-primary hover:text-white transition-all h-8 px-3"
-                                onClick={() => handleSaveRecipe(m.recipe)}
-                              >
-                                <BookMarked className="h-3.5 w-3.5 mr-2" />
-                                Save to Vault
-                              </Button>
+                              <div className="flex flex-col gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="rounded-full border-primary/30 text-primary hover:bg-primary hover:text-white transition-all h-8 px-3 text-xs"
+                                  onClick={() => handleSaveRecipe(m.recipe)}
+                                >
+                                  <BookMarked className="h-3.5 w-3.5 mr-2" />
+                                  Save
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  className="rounded-full text-muted-foreground hover:text-primary transition-all h-8 px-3 text-xs"
+                                  onClick={() => toggleExpand(i)}
+                                >
+                                  {expandedRecipeIdx === i ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                  {expandedRecipeIdx === i ? "Hide" : "Details"}
+                                </Button>
+                              </div>
                             </div>
-                            <p className="text-xs italic text-muted-foreground line-clamp-2 mb-0">
+                            
+                            <p className="text-xs italic text-muted-foreground border-l-2 border-primary/30 pl-3">
                               {m.recipe.description}
                             </p>
+
+                            {expandedRecipeIdx === i && (
+                              <div className="space-y-6 pt-4 border-t border-primary/10 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Star className="h-3.5 w-3.5 text-primary fill-primary" />
+                                    <h5 className="font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Mise en Place</h5>
+                                  </div>
+                                  <ul className="space-y-1.5">
+                                    {m.recipe.ingredientsList.map((ing: string, idx: number) => (
+                                      <li key={idx} className="text-xs flex items-center gap-2">
+                                        <span className="h-1 w-1 rounded-full bg-primary/40" />
+                                        {ing}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Star className="h-3.5 w-3.5 text-primary fill-primary" />
+                                    <h5 className="font-bold uppercase tracking-widest text-[10px] text-muted-foreground">The Process</h5>
+                                  </div>
+                                  <div className="space-y-3">
+                                    {m.recipe.instructions.map((step: string, idx: number) => (
+                                      <div key={idx} className="flex gap-3">
+                                        <span className="text-sm font-headline font-bold text-primary/20">{idx + 1}</span>
+                                        <p className="text-xs leading-relaxed">{step}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="p-3 bg-white/50 rounded-xl border border-primary/10">
+                                  <h5 className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">Chef's Plating Secret</h5>
+                                  <p className="text-[11px] italic text-muted-foreground leading-relaxed">
+                                    {m.recipe.platingSuggestions}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -194,3 +265,4 @@ export function ChefChat({ onSaveRecipe }: ChefChatProps) {
     </div>
   );
 }
+
