@@ -101,7 +101,7 @@ export default function TasteFlickApp() {
     <main className="min-h-screen pb-24 pt-4 md:pt-24 px-6 md:px-12 max-w-5xl mx-auto">
       <div className="mb-12 flex justify-between items-center md:hidden">
         <h1 className="text-3xl font-headline font-bold text-primary">TasteFlick</h1>
-        <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center">
+        <div className="w-48 h-10 text-sm rounded-lg mx-auto">
           <Sparkles className="h-5 w-5 text-primary" />
         </div>
       </div>
